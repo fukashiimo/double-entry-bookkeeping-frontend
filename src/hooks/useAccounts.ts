@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
-import { supabase, GroupedAccounts, Account } from '../lib/supabase'
+import type { GroupedAccounts, Account } from '../lib/supabase'
+
+// Supabase設定を直接インポート
+const supabaseUrl = 'https://snwmoptdzwlrtfhdawrm.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNud21vcHRkendscnRmaGRhd3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyMzE0NDksImV4cCI6MjA3MjgwNzQ0OX0.jY7hPj9jN0Wv0B5_H_GMe4pPracv3SYd-fstAw-ottE'
 
 export const useAccounts = () => {
   const [accounts, setAccounts] = useState<GroupedAccounts | null>(null)
@@ -12,9 +16,9 @@ export const useAccounts = () => {
       setError(null)
 
       // Edge Functions APIを使用
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/accounts`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/accounts`, {
         headers: {
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
           'Content-Type': 'application/json',
         },
       })
@@ -35,10 +39,10 @@ export const useAccounts = () => {
 
   const createAccount = async (name: string, type: Account['type']) => {
     try {
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/accounts`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/accounts`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name, type }),
@@ -92,3 +96,4 @@ export const useAccounts = () => {
     createAccount,
   }
 }
+

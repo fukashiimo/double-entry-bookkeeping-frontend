@@ -33,30 +33,57 @@ const Dashboard = () => {
     );
   }
 
-  // 実際のデータから収益・費用データを生成
-  const incomeData = accounts?.revenue.map(account => ({
-    name: account.name,
-    value: Math.random() * 100, // 実際のデータに置き換える
-    color: `#${Math.floor(Math.random()*16777215).toString(16)}`
-  })) || [];
+  // 仕訳データから実際の金額を計算する関数
+  const calculateAccountAmounts = (accountName: string) => {
+    if (!journalEntries) return 0;
+    
+    let total = 0;
+    journalEntries.forEach(entry => {
+      if (entry.debit_account_name === accountName) {
+        total += entry.amount; // 借方の場合はプラス
+      }
+      if (entry.credit_account_name === accountName) {
+        total -= entry.amount; // 貸方の場合はマイナス
+      }
+    });
+    return Math.abs(total); // 絶対値で表示
+  };
 
-  const expenseData = accounts?.expenses.map(account => ({
+  // 色の配列（会計ソフトウェアらしい色）
+  const colors = [
+    '#16A34A', '#DC2626', '#2563EB', '#F97316', '#8B5CF6',
+    '#EC4899', '#06B6D4', '#84CC16', '#F59E0B', '#6366F1'
+  ];
+
+  // 実際のデータから収益・費用データを生成
+  const incomeData = accounts?.revenue.map((account, index) => ({
     name: account.name,
-    value: Math.random() * 100, // 実際のデータに置き換える
-    color: `#${Math.floor(Math.random()*16777215).toString(16)}`
-  })) || [];
+    value: calculateAccountAmounts(account.name),
+    color: colors[index % colors.length]
+  })).filter(item => item.value > 0) || [];
+
+  const expenseData = accounts?.expenses.map((account, index) => ({
+    name: account.name,
+    value: calculateAccountAmounts(account.name),
+    color: colors[index % colors.length]
+  })).filter(item => item.value > 0) || [];
 
   // 実際のデータから貸借対照表データを生成
   const balanceSheetData = {
     assets: accounts?.assets.map(account => ({
       name: account.name,
-      amount: Math.floor(Math.random() * 1000000) // 実際のデータに置き換える
+      amount: calculateAccountAmounts(account.name)
     })) || [],
     liabilities: accounts?.liabilities.map(account => ({
       name: account.name,
-      amount: Math.floor(Math.random() * 1000000) // 実際のデータに置き換える
+      amount: calculateAccountAmounts(account.name)
     })) || [],
   };
+
+  // 収支サマリーの計算
+  const totalRevenue = incomeData.reduce((sum, item) => sum + item.value, 0);
+  const totalExpenses = expenseData.reduce((sum, item) => sum + item.value, 0);
+  const netIncome = totalRevenue - totalExpenses;
 
   return (
     <Stack gap="xl">
@@ -185,15 +212,17 @@ const Dashboard = () => {
                 <Stack gap="lg">
                   <Group justify="space-between">
                     <Text size="sm">収益</Text>
-                    <Text size="lg" fw={500}>¥350,000</Text>
+                    <Text size="lg" fw={500}>¥{totalRevenue.toLocaleString()}</Text>
                   </Group>
                   <Group justify="space-between">
                     <Text size="sm">支出</Text>
-                    <Text size="lg" fw={500}>¥250,000</Text>
+                    <Text size="lg" fw={500}>¥{totalExpenses.toLocaleString()}</Text>
                   </Group>
                   <Group justify="space-between">
                     <Text size="sm">利益</Text>
-                    <Text size="lg" fw={500} style={{ color: '#3B82F6' }}>¥100,000</Text>
+                    <Text size="lg" fw={500} style={{ color: netIncome >= 0 ? '#16A34A' : '#DC2626' }}>
+                      ¥{netIncome.toLocaleString()}
+                    </Text>
                   </Group>
                 </Stack>
               </Stack>

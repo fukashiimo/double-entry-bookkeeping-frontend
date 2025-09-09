@@ -1,55 +1,81 @@
 import { createTheme } from '@mantine/core';
 
 export const theme = createTheme({
-  primaryColor: 'indigo',
+  primaryColor: 'blue',
   fontFamily: 'Helvetica Neue, Arial, sans-serif',
   defaultRadius: 'md',
   colors: {
-    // メインカラー（インディゴ）
-    indigo: [
-      '#EDF2FF',
-      '#DBE4FF',
-      '#BAC8FF',
-      '#91A7FF',
-      '#748FFC',
-      '#5C7CFA',
-      '#4C6EF5',
-      '#4263EB',
-      '#3B5BDB',
-      '#364FC7',
+    // メインカラー（ブルー - 信頼感）
+    blue: [
+      '#EFF6FF',
+      '#DBEAFE',
+      '#BFDBFE',
+      '#93C5FD',
+      '#60A5FA',
+      '#3B82F6',
+      '#2563EB',
+      '#1D4ED8',
+      '#1E40AF',
+      '#1E3A8A',
     ],
-    // アクセントカラー（ティール）
-    teal: [
-      '#E6FCF5',
-      '#C3FAE8',
-      '#96F2D7',
-      '#63E6BE',
-      '#38D9A9',
-      '#20C997',
-      '#12B886',
-      '#0CA678',
-      '#099268',
-      '#087F5B',
+    // 借方カラー（グリーン - 資産・費用）
+    green: [
+      '#F0FDF4',
+      '#DCFCE7',
+      '#BBF7D0',
+      '#86EFAC',
+      '#4ADE80',
+      '#22C55E',
+      '#16A34A',
+      '#15803D',
+      '#166534',
+      '#14532D',
+    ],
+    // 貸方カラー（レッド - 負債・収益）
+    red: [
+      '#FEF2F2',
+      '#FEE2E2',
+      '#FECACA',
+      '#FCA5A5',
+      '#F87171',
+      '#EF4444',
+      '#DC2626',
+      '#B91C1C',
+      '#991B1B',
+      '#7F1D1D',
+    ],
+    // アクセントカラー（オレンジ - 警告・注意）
+    orange: [
+      '#FFF7ED',
+      '#FFEDD5',
+      '#FED7AA',
+      '#FDBA74',
+      '#FB923C',
+      '#F97316',
+      '#EA580C',
+      '#DC2626',
+      '#B91C1C',
+      '#991B1B',
     ],
     // グレースケール
     gray: [
-      '#F8F9FA',
-      '#F1F3F5',
-      '#E9ECEF',
-      '#DEE2E6',
-      '#CED4DA',
-      '#ADB5BD',
-      '#868E96',
-      '#495057',
-      '#343A40',
-      '#212529',
+      '#F9FAFB',
+      '#F3F4F6',
+      '#E5E7EB',
+      '#D1D5DB',
+      '#9CA3AF',
+      '#6B7280',
+      '#4B5563',
+      '#374151',
+      '#1F2937',
+      '#111827',
     ],
   },
   components: {
     AppShell: {
       styles: {
         header: {
-          backgroundColor: 'var(--mantine-color-indigo-6)',
+          backgroundColor: 'var(--mantine-color-blue-6)',
           borderBottom: 'none',
         },
         navbar: {
@@ -60,12 +86,12 @@ export const theme = createTheme({
     },
     Button: {
       defaultProps: {
-        color: 'indigo',
+        color: 'blue',
       },
     },
     ActionIcon: {
       defaultProps: {
-        color: 'indigo',
+        color: 'blue',
       },
     },
   },

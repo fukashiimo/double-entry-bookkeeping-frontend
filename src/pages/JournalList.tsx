@@ -12,7 +12,9 @@ import {
   ActionIcon,
   Text,
   Select,
-  Grid
+  Grid,
+  Loader,
+  Alert
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { 
@@ -22,52 +24,92 @@ import {
   IconTrash, 
   IconDownload,
   IconPlus,
-  IconFilter
+  IconFilter,
+  IconAlertCircle
 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
+import { useJournalEntries } from '../hooks/useJournalEntries';
+import { useAccounts } from '../hooks/useAccounts';
 
-// サンプルデータ
-const sampleData = Array.from({ length: 50 }, (_, index) => ({
-  id: index + 1,
-  date: new Date(2024, 2, Math.floor(Math.random() * 31) + 1),
-  debitAccount: '現金',
-  debitAmount: Math.floor(Math.random() * 1000000),
-  creditAccount: '売上',
-  creditAmount: Math.floor(Math.random() * 1000000),
-  description: `取引内容 ${index + 1}`,
-}));
+interface JournalListProps {
+  onEdit: (data: {
+    id: number;
+    date: string;
+    description: string;
+    debit_account_name: string;
+    credit_account_name: string;
+    amount: number;
+  }) => void;
+}
 
-export default function JournalList() {
+export default function JournalList({ onEdit }: JournalListProps) {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [searchDate, setSearchDate] = useState<Date | null>(null);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
 
-  const ITEMS_PER_PAGE = 10;
-  const totalPages = Math.ceil(sampleData.length / ITEMS_PER_PAGE);
+  // APIからデータを取得
+  const { journalEntries, loading: entriesLoading, error: entriesError } = useJournalEntries();
+  const { accounts, loading: accountsLoading, error: accountsError } = useAccounts();
 
-  // アカウントの選択肢
-  const accountOptions = [
-    { value: '現金', label: '現金' },
-    { value: '普通預金', label: '普通預金' },
-    { value: '売上', label: '売上' },
-    { value: '仕入', label: '仕入' },
-  ];
+  const ITEMS_PER_PAGE = 10;
+
+  // アカウントの選択肢をAPIから取得
+  const accountOptions = accounts ? [
+    ...accounts.assets.map(account => ({ value: account.name, label: account.name })),
+    ...accounts.liabilities.map(account => ({ value: account.name, label: account.name })),
+    ...accounts.equity.map(account => ({ value: account.name, label: account.name })),
+    ...accounts.revenue.map(account => ({ value: account.name, label: account.name })),
+    ...accounts.expenses.map(account => ({ value: account.name, label: account.name })),
+  ] : [];
+
+  // ローディング状態の処理
+  if (entriesLoading || accountsLoading) {
+    return (
+      <Stack align="center" justify="center" h="50vh">
+        <Loader size="lg" />
+        <Text>データを読み込み中...</Text>
+      </Stack>
+    );
+  }
+
+  // エラー状態の処理
+  if (entriesError || accountsError) {
+    return (
+      <Alert icon={<IconAlertCircle size="1rem" />} title="エラー" color="red">
+        {entriesError || accountsError}
+      </Alert>
+    );
+  }
 
   // フィルタリングとページネーションの適用
-  const filteredData = sampleData
+  const filteredData = (journalEntries || [])
     .filter(item => {
-      if (searchDate && item.date.toDateString() !== searchDate.toDateString()) return false;
+      if (searchDate && new Date(item.date).toDateString() !== searchDate.toDateString()) return false;
       if (searchKeyword && !item.description.includes(searchKeyword)) return false;
-      if (accountFilter && item.debitAccount !== accountFilter && item.creditAccount !== accountFilter) return false;
+      if (accountFilter && item.debit_account_name !== accountFilter && item.credit_account_name !== accountFilter) return false;
       return true;
     })
     .slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
+  const totalPages = Math.ceil((journalEntries || []).length / ITEMS_PER_PAGE);
+
   const handleExport = () => {
     // CSVエクスポート機能を実装予定
     console.log('Export to CSV');
+  };
+
+  const handleEdit = (item: {
+    id: number;
+    date: string;
+    description: string;
+    debit_account_name: string;
+    credit_account_name: string;
+    amount: number;
+  }) => {
+    onEdit(item);
+    navigate('/journal-entry');
   };
 
   return (
@@ -130,26 +172,26 @@ export default function JournalList() {
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>日付</Table.Th>
-              <Table.Th>借方勘定科目</Table.Th>
-              <Table.Th style={{ textAlign: 'right' }}>金額</Table.Th>
-              <Table.Th>貸方勘定科目</Table.Th>
-              <Table.Th style={{ textAlign: 'right' }}>金額</Table.Th>
+              <Table.Th style={{ width: '100px' }}>日付</Table.Th>
+              <Table.Th style={{ width: '200px' }}>借方勘定科目</Table.Th>
+              <Table.Th style={{ width: '200px' }}>貸方勘定科目</Table.Th>
+              <Table.Th style={{ textAlign: 'right', width: '120px' }}>金額</Table.Th>
               <Table.Th>内容</Table.Th>
-              <Table.Th style={{ width: 80 }}></Table.Th>
+              <Table.Th style={{ width: '80px' }}></Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {filteredData.map((item) => (
               <Table.Tr key={item.id}>
-                <Table.Td>{item.date.toLocaleDateString('ja-JP')}</Table.Td>
-                <Table.Td>{item.debitAccount}</Table.Td>
-                <Table.Td style={{ textAlign: 'right' }}>
-                  ¥{item.debitAmount.toLocaleString()}
+                <Table.Td>{new Date(item.date).toLocaleDateString('ja-JP')}</Table.Td>
+                <Table.Td style={{ fontWeight: 500, color: '#16A34A', backgroundColor: '#F0FDF4' }}>
+                  {item.debit_account_name}
                 </Table.Td>
-                <Table.Td>{item.creditAccount}</Table.Td>
-                <Table.Td style={{ textAlign: 'right' }}>
-                  ¥{item.creditAmount.toLocaleString()}
+                <Table.Td style={{ fontWeight: 500, color: '#DC2626', backgroundColor: '#FEF2F2' }}>
+                  {item.credit_account_name}
+                </Table.Td>
+                <Table.Td style={{ textAlign: 'right', fontWeight: 600, fontSize: '14px' }}>
+                  ¥{item.amount.toLocaleString()}
                 </Table.Td>
                 <Table.Td>{item.description}</Table.Td>
                 <Table.Td>
@@ -160,7 +202,10 @@ export default function JournalList() {
                       </ActionIcon>
                     </Menu.Target>
                     <Menu.Dropdown>
-                      <Menu.Item leftSection={<IconEdit size={16} />}>
+                      <Menu.Item 
+                        leftSection={<IconEdit size={16} />}
+                        onClick={() => handleEdit(item)}
+                      >
                         編集
                       </Menu.Item>
                       <Menu.Item leftSection={<IconTrash size={16} />} color="red">
@@ -177,7 +222,7 @@ export default function JournalList() {
         {/* ページネーションと概要 */}
         <Group justify="space-between" p="md">
           <Text size="sm" c="dimmed">
-            全{sampleData.length}件中 {(page - 1) * ITEMS_PER_PAGE + 1} - {Math.min(page * ITEMS_PER_PAGE, sampleData.length)}件を表示
+            全{(journalEntries || []).length}件中 {(page - 1) * ITEMS_PER_PAGE + 1} - {Math.min(page * ITEMS_PER_PAGE, (journalEntries || []).length)}件を表示
           </Text>
           <Group gap="xs">
             <Button 

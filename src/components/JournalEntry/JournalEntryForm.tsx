@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Box, NumberInput, Textarea, Button, Select, Grid, Paper, Title, ActionIcon, Alert, Loader } from '@mantine/core';
+import { Box, NumberInput, Textarea, Button, Select, Grid, Paper, Title, Alert, Loader, Stack, Text } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
-import { IconTrash, IconCopy, IconAlertCircle } from '@tabler/icons-react';
+import { IconAlertCircle } from '@tabler/icons-react';
 import { useForm } from '@mantine/form';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useJournalEntries } from '../../hooks/useJournalEntries';
@@ -9,27 +9,38 @@ import 'dayjs/locale/ja';
 
 interface JournalEntryFormProps {
   onSubmit?: (data: { date: Date | null; [key: string]: unknown }) => void;
+  editData?: {
+    id: number;
+    date: string;
+    description: string;
+    debit_account_name: string;
+    credit_account_name: string;
+    amount: number;
+  };
+  onCancel?: () => void;
 }
 
-export const JournalEntryForm = ({ onSubmit }: JournalEntryFormProps) => {
+export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryFormProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { accounts, loading: accountsLoading } = useAccounts();
   const { createJournalEntry } = useJournalEntries();
 
+  const isEditMode = !!editData;
+
   const form = useForm({
     initialValues: {
-      date: new Date(),
-      description: '',
-      debitAccount: '',
-      creditAccount: '',
-      amount: 0,
+      date: editData ? new Date(editData.date) : new Date(),
+      description: editData?.description || '',
+      debitAccount: editData?.debit_account_name || '',
+      creditAccount: editData?.credit_account_name || '',
+      amount: editData?.amount || 0,
     },
     validate: {
-      description: (value) => (value.length < 1 ? '摘要を入力してください' : null),
-      debitAccount: (value) => (value.length < 1 ? '借方勘定を選択してください' : null),
-      creditAccount: (value) => (value.length < 1 ? '貸方勘定を選択してください' : null),
-      amount: (value) => (value <= 0 ? '金額を入力してください' : null),
+      description: (value: string) => (value.length < 1 ? '摘要を入力してください' : null),
+      debitAccount: (value: string) => (value.length < 1 ? '借方勘定を選択してください' : null),
+      creditAccount: (value: string) => (value.length < 1 ? '貸方勘定を選択してください' : null),
+      amount: (value: number) => (value <= 0 ? '金額を入力してください' : null),
     },
   });
 
@@ -90,7 +101,7 @@ export const JournalEntryForm = ({ onSubmit }: JournalEntryFormProps) => {
   return (
     <Paper p="md" radius="md">
       <form onSubmit={form.onSubmit(handleSubmit)}>
-        <Title order={2} mb="md">仕訳入力</Title>
+        <Title order={2} mb="md">{isEditMode ? '仕訳編集' : '仕訳入力'}</Title>
         
         {error && (
           <Alert icon={<IconAlertCircle size="1rem" />} title="エラー" color="red" mb="md">
@@ -112,28 +123,60 @@ export const JournalEntryForm = ({ onSubmit }: JournalEntryFormProps) => {
           </Grid.Col>
         </Grid>
 
-        {/* 借方 */}
+        {/* 仕訳入力 - 左右レイアウト */}
+        <Grid mb="md">
+          {/* 借方 */}
+          <Grid.Col span={6}>
+            <Paper p="md" withBorder radius="md" style={{ backgroundColor: '#F0FDF4', borderColor: '#16A34A' }}>
+              <Text size="sm" fw={600} c="green" mb="md">借方</Text>
+              <Stack gap="md">
+                <Select
+                  label="借方科目"
+                  placeholder="科目を選択"
+                  data={accountOptions}
+                  searchable
+                  required
+                  {...form.getInputProps('debitAccount')}
+                />
+                <Select
+                  label="補助科目"
+                  placeholder="補助科目を選択"
+                  data={[]}
+                  searchable
+                  clearable
+                />
+              </Stack>
+            </Paper>
+          </Grid.Col>
+
+          {/* 貸方 */}
+          <Grid.Col span={6}>
+            <Paper p="md" withBorder radius="md" style={{ backgroundColor: '#FEF2F2', borderColor: '#DC2626' }}>
+              <Text size="sm" fw={600} c="red" mb="md">貸方</Text>
+              <Stack gap="md">
+                <Select
+                  label="貸方科目"
+                  placeholder="科目を選択"
+                  data={accountOptions}
+                  searchable
+                  required
+                  {...form.getInputProps('creditAccount')}
+                />
+                <Select
+                  label="補助科目"
+                  placeholder="補助科目を選択"
+                  data={[]}
+                  searchable
+                  clearable
+                />
+              </Stack>
+            </Paper>
+          </Grid.Col>
+        </Grid>
+
+        {/* 金額入力 */}
         <Grid mb="md" align="flex-end">
           <Grid.Col span={4}>
-            <Select
-              label="借方科目"
-              placeholder="科目を選択"
-              data={accountOptions}
-              searchable
-              required
-              {...form.getInputProps('debitAccount')}
-            />
-          </Grid.Col>
-          <Grid.Col span={4}>
-            <Select
-              label="補助科目"
-              placeholder="補助科目を選択"
-              data={[]}
-              searchable
-              clearable
-            />
-          </Grid.Col>
-          <Grid.Col span={3}>
             <NumberInput
               label="金額"
               placeholder="金額を入力"
@@ -143,49 +186,10 @@ export const JournalEntryForm = ({ onSubmit }: JournalEntryFormProps) => {
               {...form.getInputProps('amount')}
             />
           </Grid.Col>
-          <Grid.Col span={1}>
-            <ActionIcon color="blue" size="lg">
-              <IconCopy size={20} />
-            </ActionIcon>
-          </Grid.Col>
-        </Grid>
-
-        {/* 貸方 */}
-        <Grid mb="md" align="flex-end">
-          <Grid.Col span={4}>
-            <Select
-              label="貸方科目"
-              placeholder="科目を選択"
-              data={accountOptions}
-              searchable
-              required
-              {...form.getInputProps('creditAccount')}
-            />
-          </Grid.Col>
-          <Grid.Col span={4}>
-            <Select
-              label="補助科目"
-              placeholder="補助科目を選択"
-              data={[]}
-              searchable
-              clearable
-            />
-          </Grid.Col>
-          <Grid.Col span={3}>
-            <NumberInput
-              label="金額"
-              placeholder="金額を入力"
-              required
-              min={0}
-              thousandSeparator=","
-              value={form.values.amount}
-              readOnly
-            />
-          </Grid.Col>
-          <Grid.Col span={1}>
-            <ActionIcon color="red" size="lg">
-              <IconTrash size={20} />
-            </ActionIcon>
+          <Grid.Col span={8}>
+            <Text size="sm" c="dimmed">
+              借方・貸方の金額は同じになります
+            </Text>
           </Grid.Col>
         </Grid>
 
@@ -207,9 +211,14 @@ export const JournalEntryForm = ({ onSubmit }: JournalEntryFormProps) => {
         />
 
         {/* 送信ボタン */}
-        <Box style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Box style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          {isEditMode && onCancel && (
+            <Button variant="outline" size="md" onClick={onCancel}>
+              キャンセル
+            </Button>
+          )}
           <Button type="submit" size="md" loading={loading}>
-            登録
+            {isEditMode ? '更新' : '登録'}
           </Button>
         </Box>
       </form>

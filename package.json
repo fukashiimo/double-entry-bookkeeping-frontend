@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://fukashiimo.github.io/double-entry-bookkeeping-frontend/",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -15,6 +16,7 @@
     "@mantine/charts": "^7.6.1",
     "@mantine/core": "^7.6.1",
     "@mantine/dates": "^7.6.1",
+    "@mantine/form": "^8.2.8",
     "@mantine/hooks": "^7.6.1",
     "@supabase/supabase-js": "^2.57.2",
     "@tabler/icons-react": "^3.34.1",
