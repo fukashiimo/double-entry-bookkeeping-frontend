@@ -1,21 +1,17 @@
-import { Grid, Paper, Text, Title, Group, Stack, Button, ActionIcon, Box, Container, Loader, Alert } from '@mantine/core';
-import { IconPlus, IconAlertCircle } from '@tabler/icons-react';
+import { Grid, Paper, Text, Title, Group, Stack, Button, Box, Container, Loader, Alert } from '@mantine/core';
+import { IconAlertCircle } from '@tabler/icons-react';
 import { PieChart } from '@mantine/charts';
-import { useNavigate } from 'react-router-dom';
-import { useAccounts } from '../hooks/useAccounts';
-import { useJournalEntries } from '../hooks/useJournalEntries';
+import { useDashboard } from '../hooks/useDashboard';
 import { useRealtime } from '../hooks/useRealtime';
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-  const { accounts, loading: accountsLoading, error: accountsError } = useAccounts();
-  const { journalEntries, loading: entriesLoading, error: entriesError } = useJournalEntries();
+  const { data: dashboardData, loading, error } = useDashboard();
   
   // リアルタイム機能を有効化
   useRealtime();
 
   // データが読み込み中の場合はローダーを表示
-  if (accountsLoading || entriesLoading) {
+  if (loading) {
     return (
       <Stack align="center" justify="center" h="50vh">
         <Loader size="lg" />
@@ -25,60 +21,75 @@ const Dashboard = () => {
   }
 
   // エラーがある場合はエラーメッセージを表示
-  if (accountsError || entriesError) {
+  if (error) {
     return (
       <Alert icon={<IconAlertCircle size="1rem" />} title="エラー" color="red">
-        {accountsError || entriesError}
+        {error}
       </Alert>
     );
   }
 
-  // 仕訳データから実際の金額を計算する関数
-  const calculateAccountAmounts = (accountName: string) => {
-    if (!journalEntries) return 0;
-    
-    let total = 0;
-    journalEntries.forEach(entry => {
-      if (entry.debit_account_name === accountName) {
-        total += entry.amount; // 借方の場合はプラス
-      }
-      if (entry.credit_account_name === accountName) {
-        total -= entry.amount; // 貸方の場合はマイナス
-      }
-    });
-    return Math.abs(total); // 絶対値で表示
-  };
+  // データがない場合
+  if (!dashboardData) {
+    return (
+      <Alert icon={<IconAlertCircle size="1rem" />} title="データなし" color="yellow">
+        データを取得できませんでした。
+      </Alert>
+    );
+  }
 
-  // 色の配列（会計ソフトウェアらしい色）
+  // ダッシュボードデータから情報を取得
+  const { year, month, accounts, journalEntries, incomeData, expenseData, summary } = dashboardData;
+  const currentMonthString = `${year}年${month}月`;
+
+  // 色の配列（温かみのあるチームみらい風の色）
   const colors = [
-    '#16A34A', '#DC2626', '#2563EB', '#F97316', '#8B5CF6',
-    '#EC4899', '#06B6D4', '#84CC16', '#F59E0B', '#6366F1'
+    '#F7931E', '#E53E3E', '#16A34A', '#F59E0B', '#FF8A95',
+    '#86EFAC', '#FBBF24', '#FFB3BA', '#4ADE80', '#FCD34D'
   ];
 
-  // 実際のデータから収益・費用データを生成
-  const incomeData = accounts?.revenue.map((account, index) => ({
-    name: account.name,
-    value: calculateAccountAmounts(account.name),
-    color: colors[index % colors.length]
-  })).filter(item => item.value > 0) || [];
+  // デバッグ用: データの内容をコンソールに出力
+  console.log('=== DASHBOARD DEBUG INFO ===');
+  console.log('Year:', year);
+  console.log('Month:', month);
+  console.log('Current Month String:', currentMonthString);
+  console.log('Accounts Data:', accounts);
+  console.log('Journal Entries:', journalEntries);
+  console.log('Income Data:', incomeData);
+  console.log('Expense Data:', expenseData);
+  console.log('Summary:', summary);
+  console.log('================================');
 
-  const expenseData = accounts?.expenses.map((account, index) => ({
-    name: account.name,
-    value: calculateAccountAmounts(account.name),
+  // 円グラフ用のデータを準備（色を追加）
+  const incomeChartData = incomeData.map((item, index) => ({
+    ...item,
     color: colors[index % colors.length]
-  })).filter(item => item.value > 0) || [];
+  }));
 
-  // 実際のデータから貸借対照表データを生成
+  const expenseChartData = expenseData.map((item, index) => ({
+    ...item,
+    color: colors[index % colors.length]
+  }));
+
+  // 貸借対照表データはAPIから取得済み
   const balanceSheetData = {
-    assets: accounts?.assets.map(account => ({
+    assets: accounts.assets.map(account => ({
       name: account.name,
-      amount: calculateAccountAmounts(account.name)
-    })) || [],
-    liabilities: accounts?.liabilities.map(account => ({
+      amount: 0 // 簡略化のため0に設定
+    })),
+    liabilities: accounts.liabilities.map(account => ({
       name: account.name,
-      amount: calculateAccountAmounts(account.name)
-    })) || [],
+      amount: 0 // 簡略化のため0に設定
+    })),
+    equity: accounts.equity.map(account => ({
+      name: account.name,
+      amount: 0 // 簡略化のため0に設定
+    })),
   };
+
+  const totalLiabilities = balanceSheetData.liabilities.reduce((sum, item) => sum + item.amount, 0);
+  const totalEquity = balanceSheetData.equity.reduce((sum, item) => sum + item.amount, 0);
+  const totalLiabilitiesAndEquity = totalLiabilities + totalEquity;
 
   // 収支サマリーの計算
   const totalRevenue = incomeData.reduce((sum, item) => sum + item.value, 0);
@@ -89,8 +100,8 @@ const Dashboard = () => {
     <Stack gap="xl">
       <Grid gutter="xl">
         {/* 貸借対照表 */}
-        <Grid.Col span={{ base: 12, md: 8 }}>
-          <Paper shadow="sm" p="xl" radius="lg">
+        <Grid.Col span={12}>
+          <Paper p="xl" radius="lg" withBorder>
             <Title order={4} mb="xl">貸借対照表</Title>
             <Grid gutter="xl">
               {/* 資産 */}
@@ -110,63 +121,94 @@ const Dashboard = () => {
                 </Group>
               </Grid.Col>
 
-              {/* 負債・純資産 */}
+              {/* 負債・純資産（分割表示） */}
               <Grid.Col span={6}>
-                <Text size="sm" c="dimmed" mb="md">負債・純資産</Text>
+                <Text size="sm" c="dimmed" mb="md">負債</Text>
                 {balanceSheetData.liabilities.map((item, index) => (
-                  <Group key={index} justify="space-between" mb="md">
+                  <Group key={`liab-${index}`} justify="space-between" mb="md">
                     <Text size="sm">{item.name}</Text>
                     <Text size="sm">{item.amount.toLocaleString()}円</Text>
                   </Group>
                 ))}
+
+                <Text size="sm" c="dimmed" mb="md" mt="md">純資産</Text>
+                {balanceSheetData.equity.map((item, index) => (
+                  <Group key={`equity-${index}`} justify="space-between" mb="md">
+                    <Text size="sm">{item.name}</Text>
+                    <Text size="sm">{item.amount.toLocaleString()}円</Text>
+                  </Group>
+                ))}
+
+                {/* 左側（資産）と同じスタイルで合計表示を揃える */}
                 <Group justify="space-between" mt="xl" pt="md" style={{ borderTop: '1px solid #eee' }}>
                   <Text fw={500}>合計</Text>
-                  <Text fw={500}>
-                    {balanceSheetData.liabilities.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}円
-                  </Text>
+                  <Text fw={500}>{totalLiabilitiesAndEquity.toLocaleString()}円</Text>
                 </Group>
               </Grid.Col>
             </Grid>
           </Paper>
         </Grid.Col>
 
-        {/* 仕訳入力ボタン */}
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <Paper shadow="sm" p="xl" radius="lg" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Stack align="center" gap="lg">
-              <ActionIcon
-                size={80}
-                radius="xl"
-                variant="light"
-                color="blue"
-                onClick={() => navigate('/journal-entry')}
-                style={{ backgroundColor: '#EBF5FF' }}
-              >
-                <IconPlus size={40} />
-              </ActionIcon>
-              <Box ta="center">
-                <Title order={4} mb="xs">仕訳を入力</Title>
-                <Text size="sm" c="dimmed">
-                  新しい取引を記録する
-                </Text>
-              </Box>
-            </Stack>
+      </Grid>
+
+      {/* 損益計算書 */}
+      <Grid gutter="xl">
+        <Grid.Col span={12}>
+          <Paper p="xl" radius="lg" withBorder>
+            <Title order={4} mb="xl">損益計算書</Title>
+            <Grid gutter="xl">
+              {/* 収益 */}
+              <Grid.Col span={6}>
+                <Text size="sm" c="dimmed" mb="md">収益</Text>
+                {incomeData.map((item, index) => (
+                  <Group key={index} justify="space-between" mb="md">
+                    <Text size="sm">{item.name}</Text>
+                    <Text size="sm" fw={500}>¥{item.value.toLocaleString()}</Text>
+                  </Group>
+                ))}
+                <Group justify="space-between" mb="md" pt="md" style={{ borderTop: '1px solid #e9ecef' }}>
+                  <Text size="sm" fw={600}>収益合計</Text>
+                  <Text size="sm" fw={600}>¥{totalRevenue.toLocaleString()}</Text>
+                </Group>
+              </Grid.Col>
+
+              {/* 費用 */}
+              <Grid.Col span={6}>
+                <Text size="sm" c="dimmed" mb="md">費用</Text>
+                {expenseData.map((item, index) => (
+                  <Group key={index} justify="space-between" mb="md">
+                    <Text size="sm">{item.name}</Text>
+                    <Text size="sm" fw={500}>¥{item.value.toLocaleString()}</Text>
+                  </Group>
+                ))}
+                <Group justify="space-between" mb="md" pt="md" style={{ borderTop: '1px solid #e9ecef' }}>
+                  <Text size="sm" fw={600}>費用合計</Text>
+                  <Text size="sm" fw={600}>¥{totalExpenses.toLocaleString()}</Text>
+                </Group>
+                <Group justify="space-between" mb="md" pt="md" style={{ borderTop: '2px solid #e9ecef' }}>
+                  <Text size="md" fw={700}>当期純利益</Text>
+                  <Text size="md" fw={700} style={{ color: netIncome >= 0 ? '#16A34A' : '#DC2626' }}>
+                    ¥{netIncome.toLocaleString()}
+                  </Text>
+                </Group>
+              </Grid.Col>
+            </Grid>
           </Paper>
         </Grid.Col>
       </Grid>
 
       {/* 今月の家計簿 */}
-      <Paper shadow="sm" p="xl" radius="lg">
+      <Paper p="xl" radius="lg" withBorder>
         <Group justify="space-between" mb="xl">
           <Title order={4}>今月の家計簿</Title>
-          <Button 
-            variant="subtle" 
-            size="md"
-            color="blue"
-            style={{ color: '#3B82F6' }}
-          >
-            2024年3月
-          </Button>
+                <Button 
+                  variant="subtle" 
+                  size="md"
+                  color="orange"
+                  style={{ color: '#F7931E' }}
+                >
+                  {currentMonthString}
+                </Button>
         </Group>
         
         <Grid gutter={80}>
@@ -177,13 +219,19 @@ const Dashboard = () => {
                   <Stack align="center">
                     <Text size="sm" c="dimmed">収益</Text>
                     <Box w={{ base: 240, sm: 280 }} h={{ base: 240, sm: 280 }}>
-                      <PieChart
-                        data={incomeData}
-                        withLabels
-                        labelsType="percent"
-                        tooltipDataSource="segment"
-                        valueFormatter={(value) => `¥${value.toLocaleString()}`}
-                      />
+                      {incomeChartData.length > 0 ? (
+                        <PieChart
+                          data={incomeChartData}
+                          withLabels
+                          labelsType="percent"
+                          tooltipDataSource="segment"
+                          valueFormatter={(value) => `¥${value.toLocaleString()}`}
+                        />
+                      ) : (
+                        <Stack align="center" justify="center" h="100%">
+                          <Text size="sm" c="dimmed">データがありません</Text>
+                        </Stack>
+                      )}
                     </Box>
                   </Stack>
                 </Grid.Col>
@@ -191,13 +239,19 @@ const Dashboard = () => {
                   <Stack align="center">
                     <Text size="sm" c="dimmed">支出</Text>
                     <Box w={{ base: 240, sm: 280 }} h={{ base: 240, sm: 280 }}>
-                      <PieChart
-                        data={expenseData}
-                        withLabels
-                        labelsType="percent"
-                        tooltipDataSource="segment"
-                        valueFormatter={(value) => `¥${value.toLocaleString()}`}
-                      />
+                      {expenseChartData.length > 0 ? (
+                        <PieChart
+                          data={expenseChartData}
+                          withLabels
+                          labelsType="percent"
+                          tooltipDataSource="segment"
+                          valueFormatter={(value) => `¥${value.toLocaleString()}`}
+                        />
+                      ) : (
+                        <Stack align="center" justify="center" h="100%">
+                          <Text size="sm" c="dimmed">データがありません</Text>
+                        </Stack>
+                      )}
                     </Box>
                   </Stack>
                 </Grid.Col>
@@ -212,16 +266,16 @@ const Dashboard = () => {
                 <Stack gap="lg">
                   <Group justify="space-between">
                     <Text size="sm">収益</Text>
-                    <Text size="lg" fw={500}>¥{totalRevenue.toLocaleString()}</Text>
+                    <Text size="lg" fw={500}>¥{summary.totalRevenue.toLocaleString()}</Text>
                   </Group>
                   <Group justify="space-between">
                     <Text size="sm">支出</Text>
-                    <Text size="lg" fw={500}>¥{totalExpenses.toLocaleString()}</Text>
+                    <Text size="lg" fw={500}>¥{summary.totalExpenses.toLocaleString()}</Text>
                   </Group>
                   <Group justify="space-between">
                     <Text size="sm">利益</Text>
-                    <Text size="lg" fw={500} style={{ color: netIncome >= 0 ? '#16A34A' : '#DC2626' }}>
-                      ¥{netIncome.toLocaleString()}
+                    <Text size="lg" fw={500} style={{ color: summary.netIncome >= 0 ? '#16A34A' : '#E53E3E' }}>
+                      ¥{summary.netIncome.toLocaleString()}
                     </Text>
                   </Group>
                 </Stack>

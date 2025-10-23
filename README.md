@@ -53,20 +53,37 @@ npm run dev
 
 ## 🌐 デプロイメント
 
-### GitHub Pages
-1. GitHubリポジトリを作成
-2. コードをプッシュ
-3. GitHub Pagesを有効化
-4. 環境変数を設定
+詳細なデプロイ方法は [DEPLOYMENT.md](./DEPLOYMENT.md) を参照してください。
 
-### 環境変数の設定
-GitHub Pagesでは環境変数を直接設定できないため、ビルド時に埋め込みます：
+### クイックデプロイ
 
+#### Vercel（推奨）
 ```bash
-# ビルド時に環境変数を設定
-VITE_SUPABASE_URL=https://snwmoptdzwlrtfhdawrm.supabase.co \
-VITE_SUPABASE_ANON_KEY=your-anon-key \
+# Vercel CLIをインストール
+npm install -g vercel
+
+# デプロイ
+vercel
+
+# 環境変数を設定
+# Vercel Dashboard > Settings > Environment Variables
+```
+
+#### Netlify
+```bash
+# ビルド
 npm run build
+
+# Netlifyにデプロイ
+# 1. Netlify Dashboardでサイトを作成
+# 2. distフォルダをドラッグ&ドロップ
+# 3. 環境変数を設定
+```
+
+### 環境変数
+```env
+VITE_SUPABASE_URL=https://snwmoptdzwlrtfhdawrm.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
 ## 📚 機能

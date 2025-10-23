@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AppShell, Burger, Group, Title, UnstyledButton, Text, Box, Stack } from '@mantine/core';
+import { AppShell, Burger, Group, Title, UnstyledButton, Text, Box, Stack, ActionIcon, Affix, Menu, Avatar } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { 
   IconDashboard, 
@@ -7,8 +7,11 @@ import {
   IconSettings,
   IconChartPie,
   IconPlus,
-  IconList
+  IconList,
+  IconLogout,
+  IconUser
 } from '@tabler/icons-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const mainLinks = [
   { icon: IconDashboard, label: 'ダッシュボード', path: '/' },
@@ -27,6 +30,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [opened, { toggle }] = useDisclosure();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
   const mainItems = mainLinks.map((link) => {
     const isActive = location.pathname === link.path;
@@ -45,10 +58,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
           alignItems: 'center',
           width: '100%',
           borderRadius: theme.radius.md,
-          color: isActive ? theme.colors.indigo[7] : theme.colors.gray[7],
-          backgroundColor: isActive ? theme.colors.indigo[0] : 'transparent',
+          color: isActive ? '#7566FF' : '#7A736C',
+          backgroundColor: isActive ? '#E8E5FF' : 'transparent',
           '&:hover': {
-            backgroundColor: isActive ? theme.colors.indigo[1] : theme.colors.gray[0],
+            backgroundColor: isActive ? '#D1CCFF' : '#F7F5F3',
           },
           transition: 'all 0.2s ease',
         })}
@@ -75,25 +88,49 @@ export default function MainLayout({ children }: MainLayoutProps) {
       style={{ minHeight: '100vh' }}
     >
       <AppShell.Header>
-        <Group h="100%" px="xl" style={{ backgroundColor: 'var(--mantine-color-indigo-6)' }}>
-          <Burger 
-            opened={opened} 
-            onClick={toggle} 
-            hiddenFrom="sm" 
-            size="sm"
-            color="white"
-          />
-          <Title order={3} c="white" style={{ fontWeight: 500 }}>複式簿記</Title>
+        <Group h="100%" px="xl" justify="space-between" style={{ backgroundColor: '#47A7EF' }}>
+          <Group>
+            <Burger 
+              opened={opened} 
+              onClick={toggle} 
+              hiddenFrom="sm" 
+              size="sm"
+              color="white"
+            />
+            <Title order={3} c="white" style={{ fontWeight: 500 }}>複式簿記</Title>
+          </Group>
+          
+          <Menu shadow="md" width={200}>
+            <Menu.Target>
+              <ActionIcon variant="subtle" size="lg" radius="xl">
+                <Avatar size="sm" radius="xl" color="white">
+                  {user?.email?.charAt(0).toUpperCase() || <IconUser size={20} />}
+                </Avatar>
+              </ActionIcon>
+            </Menu.Target>
+
+            <Menu.Dropdown>
+              <Menu.Label>{user?.email}</Menu.Label>
+              <Menu.Divider />
+              <Menu.Item
+                leftSection={<IconLogout size={16} />}
+                onClick={handleSignOut}
+                color="red"
+              >
+                ログアウト
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         </Group>
       </AppShell.Header>
 
       <AppShell.Navbar 
         p="md" 
-        style={(theme) => ({
-          backgroundColor: theme.white,
-          borderRight: `1px solid ${theme.colors.gray[2]}`,
+        style={{
+          backgroundColor: '#F8F7FF',
+          borderRight: '1px solid rgba(71, 51, 255, 0.2)',
           zIndex: 1000,
-        })}
+        }}
       >
         <Box p="md">
           <Text size="sm" fw={500} c="dimmed" mb="lg" px="md">
@@ -105,17 +142,35 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       <AppShell.Main>
         <Box
-          style={(theme) => ({
+          style={{
             maxWidth: '1400px',
             margin: '0 auto',
             width: '100%',
-            backgroundColor: theme.colors.gray[0],
-            padding: theme.spacing.xl,
+            backgroundColor: '#FDFCFB',
+            padding: '24px',
             minHeight: 'calc(100vh - 70px)',
-          })}
+          }}
         >
           {children}
         </Box>
+        
+        {/* モバイル用フローティングボタン */}
+        <Affix position={{ bottom: 20, right: 20 }}>
+          <ActionIcon
+            size="xl"
+            radius="xl"
+            variant="filled"
+            color="orange"
+            onClick={() => navigate('/journal-entry')}
+            style={{
+              backgroundColor: '#FFB31E',
+              zIndex: 1000,
+            }}
+            hiddenFrom="sm"
+          >
+            <IconPlus size={24} />
+          </ActionIcon>
+        </Affix>
       </AppShell.Main>
     </AppShell>
   );

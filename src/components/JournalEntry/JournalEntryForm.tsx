@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Box, NumberInput, Textarea, Button, Select, Grid, Paper, Title, Alert, Loader, Stack, Text } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { useForm } from '@mantine/form';
 import { useAccounts } from '../../hooks/useAccounts';
+import { useSubaccounts } from '../../hooks/useSubaccounts';
 import { useJournalEntries } from '../../hooks/useJournalEntries';
 import 'dayjs/locale/ja';
 
@@ -25,6 +26,9 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
   const [error, setError] = useState<string | null>(null);
   const { accounts, loading: accountsLoading } = useAccounts();
   const { createJournalEntry } = useJournalEntries();
+  const { fetchSubaccounts } = useSubaccounts();
+  const [debitSubOptions, setDebitSubOptions] = useState<{ value: string; label: string }[]>([]);
+  const [creditSubOptions, setCreditSubOptions] = useState<{ value: string; label: string }[]>([]);
 
   const isEditMode = !!editData;
 
@@ -33,7 +37,9 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
       date: editData ? new Date(editData.date) : new Date(),
       description: editData?.description || '',
       debitAccount: editData?.debit_account_name || '',
+      debitSubaccount: '',
       creditAccount: editData?.credit_account_name || '',
+      creditSubaccount: '',
       amount: editData?.amount || 0,
     },
     validate: {
@@ -44,19 +50,58 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
     },
   });
 
-  // 全勘定科目を一つの配列にまとめる
-  const allAccounts = accounts ? [
-    ...accounts.assets,
-    ...accounts.liabilities,
-    ...accounts.equity,
-    ...accounts.revenue,
-    ...accounts.expenses,
+  // グループ化された勘定科目の選択肢を作成
+  const groupedAccountOptions = accounts ? [
+    {
+      group: '資産',
+      items: accounts.assets.map(account => ({
+        value: account.name,
+        label: `　${account.name}`,
+      }))
+    },
+    {
+      group: '負債',
+      items: accounts.liabilities.map(account => ({
+        value: account.name,
+        label: `　${account.name}`,
+      }))
+    },
+    {
+      group: '純資産',
+      items: accounts.equity.map(account => ({
+        value: account.name,
+        label: `　${account.name}`,
+      }))
+    },
+    {
+      group: '収益',
+      items: accounts.revenue.map(account => ({
+        value: account.name,
+        label: `　${account.name}`,
+      }))
+    },
+    {
+      group: '費用',
+      items: accounts.expenses.map(account => ({
+        value: account.name,
+        label: `　${account.name}`,
+      }))
+    },
   ] : [];
 
-  const accountOptions = allAccounts.map(account => ({
-    value: account.name,
-    label: `${account.name} (${account.type})`,
-  }));
+  // 便利関数: 勘定科目名からIDを取得
+  const findAccountIdByName = useMemo(() => {
+    if (!accounts) return (_name: string) => undefined as number | undefined;
+    const nameToId = new Map<string, number>();
+    [
+      ...accounts.assets,
+      ...accounts.liabilities,
+      ...accounts.equity,
+      ...accounts.revenue,
+      ...accounts.expenses,
+    ].forEach(a => nameToId.set(a.name, a.id));
+    return (name: string) => nameToId.get(name);
+  }, [accounts]);
 
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
@@ -68,7 +113,9 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
         date: values.date.toISOString().split('T')[0],
         description: values.description,
         debitAccount: values.debitAccount,
+        debitSubaccount: values.debitSubaccount || null,
         creditAccount: values.creditAccount,
+        creditSubaccount: values.creditSubaccount || null,
         amount: values.amount,
       };
 
@@ -91,7 +138,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
 
   if (accountsLoading) {
     return (
-      <Paper p="md" radius="md">
+        <Paper p="md" radius="md" withBorder>
         <Loader size="lg" />
         <p>勘定科目を読み込み中...</p>
       </Paper>
@@ -99,7 +146,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
   }
 
   return (
-    <Paper p="md" radius="md">
+        <Paper p="md" radius="md" withBorder>
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Title order={2} mb="md">{isEditMode ? '仕訳編集' : '仕訳入力'}</Title>
         
@@ -127,23 +174,39 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
         <Grid mb="md">
           {/* 借方 */}
           <Grid.Col span={6}>
-            <Paper p="md" withBorder radius="md" style={{ backgroundColor: '#F0FDF4', borderColor: '#16A34A' }}>
-              <Text size="sm" fw={600} c="green" mb="md">借方</Text>
+            <Paper p="xl" withBorder radius="lg" style={{ 
+              backgroundColor: '#F0FDF4', 
+              borderColor: '#86EFAC',
+              borderWidth: '2px'
+            }}>
+              <Text size="sm" fw={600} c="teal" mb="lg" style={{ 
+                color: '#16A34A',
+                fontSize: '16px',
+                letterSpacing: '0.5px'
+              }}>借方</Text>
               <Stack gap="md">
                 <Select
                   label="借方科目"
                   placeholder="科目を選択"
-                  data={accountOptions}
+                  data={groupedAccountOptions}
                   searchable
                   required
                   {...form.getInputProps('debitAccount')}
+                  onChange={async (val) => {
+                    form.setFieldValue('debitAccount', val || '')
+                    form.setFieldValue('debitSubaccount', '')
+                    const accountId = val ? findAccountIdByName(val) : undefined
+                    const list = await fetchSubaccounts(accountId)
+                    setDebitSubOptions(list.map(s => ({ value: s.name, label: s.name })))
+                  }}
                 />
                 <Select
                   label="補助科目"
                   placeholder="補助科目を選択"
-                  data={[]}
+                  data={debitSubOptions}
                   searchable
                   clearable
+                  {...form.getInputProps('debitSubaccount')}
                 />
               </Stack>
             </Paper>
@@ -151,23 +214,39 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
 
           {/* 貸方 */}
           <Grid.Col span={6}>
-            <Paper p="md" withBorder radius="md" style={{ backgroundColor: '#FEF2F2', borderColor: '#DC2626' }}>
-              <Text size="sm" fw={600} c="red" mb="md">貸方</Text>
+            <Paper p="xl" withBorder radius="lg" style={{ 
+              backgroundColor: '#FFF5F5', 
+              borderColor: '#FFB3BA',
+              borderWidth: '2px'
+            }}>
+              <Text size="sm" fw={600} c="pink" mb="lg" style={{ 
+                color: '#E53E3E',
+                fontSize: '16px',
+                letterSpacing: '0.5px'
+              }}>貸方</Text>
               <Stack gap="md">
                 <Select
                   label="貸方科目"
                   placeholder="科目を選択"
-                  data={accountOptions}
+                  data={groupedAccountOptions}
                   searchable
                   required
                   {...form.getInputProps('creditAccount')}
+                  onChange={async (val) => {
+                    form.setFieldValue('creditAccount', val || '')
+                    form.setFieldValue('creditSubaccount', '')
+                    const accountId = val ? findAccountIdByName(val) : undefined
+                    const list = await fetchSubaccounts(accountId)
+                    setCreditSubOptions(list.map(s => ({ value: s.name, label: s.name })))
+                  }}
                 />
                 <Select
                   label="補助科目"
                   placeholder="補助科目を選択"
-                  data={[]}
+                  data={creditSubOptions}
                   searchable
                   clearable
+                  {...form.getInputProps('creditSubaccount')}
                 />
               </Stack>
             </Paper>
@@ -200,14 +279,6 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
           minRows={2}
           mb="md"
           {...form.getInputProps('description')}
-        />
-
-        {/* メモ */}
-        <Textarea
-          label="メモ"
-          placeholder="備考やメモを入力"
-          minRows={2}
-          mb="md"
         />
 
         {/* 送信ボタン */}

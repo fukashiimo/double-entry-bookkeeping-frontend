@@ -119,13 +119,14 @@ export default function JournalList({ onEdit }: JournalListProps) {
         <Button 
           leftSection={<IconPlus size={16} />}
           onClick={() => navigate('/journal-entry')}
+          color="orange"
         >
           新規仕訳
         </Button>
       </Group>
 
       {/* フィルター部分 */}
-      <Paper shadow="xs" p="md" radius="md">
+            <Paper p="md" radius="md" withBorder>
         <Grid align="flex-end">
           <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
             <DateInput
@@ -156,25 +157,26 @@ export default function JournalList({ onEdit }: JournalListProps) {
             />
           </Grid.Col>
           <Grid.Col span={{ base: 12, sm: 6, md: 2 }}>
-            <Button 
-              variant="outline" 
-              leftSection={<IconFilter size={16} />}
-              fullWidth
-            >
-              絞り込み
-            </Button>
+                  <Button 
+                    variant="outline" 
+                    leftSection={<IconFilter size={16} />}
+                    fullWidth
+                    color="orange"
+                  >
+                    絞り込み
+                  </Button>
           </Grid.Col>
         </Grid>
       </Paper>
 
       {/* テーブル部分 */}
-      <Paper shadow="xs" radius="md">
+            <Paper radius="md" withBorder>
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
               <Table.Th style={{ width: '100px' }}>日付</Table.Th>
-              <Table.Th style={{ width: '200px' }}>借方勘定科目</Table.Th>
-              <Table.Th style={{ width: '200px' }}>貸方勘定科目</Table.Th>
+              <Table.Th style={{ width: '280px' }}>借方勘定科目</Table.Th>
+              <Table.Th style={{ width: '280px' }}>貸方勘定科目</Table.Th>
               <Table.Th style={{ textAlign: 'right', width: '120px' }}>金額</Table.Th>
               <Table.Th>内容</Table.Th>
               <Table.Th style={{ width: '80px' }}></Table.Th>
@@ -184,11 +186,31 @@ export default function JournalList({ onEdit }: JournalListProps) {
             {filteredData.map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{new Date(item.date).toLocaleDateString('ja-JP')}</Table.Td>
-                <Table.Td style={{ fontWeight: 500, color: '#16A34A', backgroundColor: '#F0FDF4' }}>
+                <Table.Td style={{ 
+                  fontWeight: 500, 
+                  color: '#16A34A', 
+                  backgroundColor: '#F0FDF4',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  border: '1px solid #86EFAC'
+                }}>
                   {item.debit_account_name}
+                  {item.debit_subaccount_name ? (
+                    <span style={{ color: '#166534', marginLeft: 6, fontSize: '0.9em' }}>（{item.debit_subaccount_name}）</span>
+                  ) : null}
                 </Table.Td>
-                <Table.Td style={{ fontWeight: 500, color: '#DC2626', backgroundColor: '#FEF2F2' }}>
+                <Table.Td style={{ 
+                  fontWeight: 500, 
+                  color: '#E53E3E', 
+                  backgroundColor: '#FFF5F5',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  border: '1px solid #FFB3BA'
+                }}>
                   {item.credit_account_name}
+                  {item.credit_subaccount_name ? (
+                    <span style={{ color: '#C53030', marginLeft: 6, fontSize: '0.9em' }}>（{item.credit_subaccount_name}）</span>
+                  ) : null}
                 </Table.Td>
                 <Table.Td style={{ textAlign: 'right', fontWeight: 600, fontSize: '14px' }}>
                   ¥{item.amount.toLocaleString()}
@@ -225,13 +247,14 @@ export default function JournalList({ onEdit }: JournalListProps) {
             全{(journalEntries || []).length}件中 {(page - 1) * ITEMS_PER_PAGE + 1} - {Math.min(page * ITEMS_PER_PAGE, (journalEntries || []).length)}件を表示
           </Text>
           <Group gap="xs">
-            <Button 
-              variant="light" 
-              leftSection={<IconDownload size={16} />}
-              onClick={handleExport}
-            >
-              CSVエクスポート
-            </Button>
+                  <Button 
+                    variant="light" 
+                    leftSection={<IconDownload size={16} />}
+                    onClick={handleExport}
+                    color="orange"
+                  >
+                    CSVエクスポート
+                  </Button>
             <Pagination 
               value={page} 
               onChange={setPage} 

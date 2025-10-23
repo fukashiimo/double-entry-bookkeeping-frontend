@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Supabase設定
-const supabaseUrl = 'https://snwmoptdzwlrtfhdawrm.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNud21vcHRkendscnRmaGRhd3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyMzE0NDksImV4cCI6MjA3MjgwNzQ0OX0.jY7hPj9jN0Wv0B5_H_GMe4pPracv3SYd-fstAw-ottE'
+const supabaseUrl = 'https://iivyylojvqgucmbyfrqw.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpdnl5bG9qdnFndWNtYnlmcnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3NDg1NjcsImV4cCI6MjA3MzMyNDU2N30.ecmSicRrcBJd1sqFpxZc5Vx9Lls0HFBz5KMb4IEwD5Q'
 
 // Supabaseクライアントの作成
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -21,7 +21,9 @@ export interface JournalEntry {
   date: string
   description: string
   debit_account_name: string
+  debit_subaccount_name?: string | null
   credit_account_name: string
+  credit_subaccount_name?: string | null
   amount: number
   created_at: string
   updated_at: string
@@ -33,5 +35,13 @@ export interface GroupedAccounts {
   equity: Account[]
   revenue: Account[]
   expenses: Account[]
+}
+
+export interface Subaccount {
+  id: number
+  account_id: number
+  name: string
+  created_at: string
+  updated_at: string
 }
 
