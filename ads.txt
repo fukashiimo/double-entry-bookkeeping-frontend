@@ -1,0 +1,6 @@
+# Google AdSense authorized sellers
+# Publisher ID を実値に置き換えてください（例: pub-1234567890123456）
+# 形式: google.com, pub-XXXXXXXXXXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+
+google.com, pub-9780206641404014, DIRECT, f08c47fec0942fa0
+
