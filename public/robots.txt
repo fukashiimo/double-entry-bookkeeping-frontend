@@ -1,7 +1,7 @@
-# 検索エンジンにインデックスされないように設定
+# 検索エンジンのクロールを許可（AdSense 審査向け）
 User-agent: *
-Disallow: /
+Disallow:
 
-# サイトマップも無効化
-# Sitemap: 
+# 必要ならサイトマップURLを設定
+# Sitemap: https://<your-domain>/sitemap.xml
 

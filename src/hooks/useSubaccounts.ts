@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react'
 import type { Subaccount } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 
 const supabaseUrl = 'https://iivyylojvqgucmbyfrqw.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpdnl5bG9qdnFndWNtYnlmcnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3NDg1NjcsImV4cCI6MjA3MzMyNDU2N30.ecmSicRrcBJd1sqFpxZc5Vx9Lls0HFBz5KMb4IEwD5Q'
 
 export const useSubaccounts = () => {
   const [subaccounts, setSubaccounts] = useState<Subaccount[]>([])
@@ -16,10 +16,13 @@ export const useSubaccounts = () => {
       const url = new URL(`${supabaseUrl}/functions/v1/subaccounts`)
       if (accountId) url.searchParams.set('account_id', String(accountId))
 
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Unauthorized: no access token')
       const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
       })
@@ -37,10 +40,13 @@ export const useSubaccounts = () => {
   }, [])
 
   const createSubaccount = useCallback(async (accountId: number, name: string) => {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
+    if (!accessToken) throw new Error('Unauthorized: no access token')
     const response = await fetch(`${supabaseUrl}/functions/v1/subaccounts`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ account_id: accountId, name }),
@@ -52,10 +58,13 @@ export const useSubaccounts = () => {
   }, [])
 
   const updateSubaccount = useCallback(async (id: number, values: Partial<Pick<Subaccount, 'account_id' | 'name'>>) => {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
+    if (!accessToken) throw new Error('Unauthorized: no access token')
     const response = await fetch(`${supabaseUrl}/functions/v1/subaccounts`, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ id, ...values }),
@@ -67,10 +76,13 @@ export const useSubaccounts = () => {
   }, [])
 
   const deleteSubaccount = useCallback(async (id: number) => {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
+    if (!accessToken) throw new Error('Unauthorized: no access token')
     const response = await fetch(`${supabaseUrl}/functions/v1/subaccounts?id=${id}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
     })

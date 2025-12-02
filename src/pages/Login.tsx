@@ -1,4 +1,4 @@
-import { Container, Paper, Title, Text, Button, Stack, Center } from '@mantine/core'
+import { Container, Paper, Title, Text, Button, Stack, Box } from '@mantine/core'
 import { IconBrandGoogle, IconBrandApple, IconBrandWindows } from '@tabler/icons-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useState } from 'react'
@@ -44,7 +44,19 @@ export default function Login() {
   }
 
   return (
-    <Center style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    <Box
+      style={{
+        position: 'fixed',
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '100vw',
+        height: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        backgroundColor: '#f5f5f5',
+      }}
+    >
       <Container size={420} my={40}>
         <Paper withBorder shadow="md" p={30} mt={30} radius="md">
           <Title ta="center" mb="md">
@@ -66,15 +78,19 @@ export default function Login() {
               Googleでログイン
             </Button>
 
+            <Text c="dimmed" size="xs" ta="center">
+              Apple / Microsoft ログインは現在準備中です
+            </Text>
+
             <Button
               fullWidth
               leftSection={<IconBrandApple size={20} />}
               variant="default"
               onClick={handleAppleSignIn}
-              loading={loading === 'apple'}
-              disabled={loading !== null && loading !== 'apple'}
+              loading={false}
+              disabled
             >
-              Appleでログイン
+              Appleでログイン（準備中）
             </Button>
 
             <Button
@@ -82,10 +98,10 @@ export default function Login() {
               leftSection={<IconBrandWindows size={20} />}
               variant="default"
               onClick={handleMicrosoftSignIn}
-              loading={loading === 'microsoft'}
-              disabled={loading !== null && loading !== 'microsoft'}
+              loading={false}
+              disabled
             >
-              Microsoftでログイン
+              Microsoftでログイン（準備中）
             </Button>
           </Stack>
 
@@ -94,7 +110,7 @@ export default function Login() {
           </Text>
         </Paper>
       </Container>
-    </Center>
+    </Box>
   )
 }
 

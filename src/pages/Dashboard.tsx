@@ -197,18 +197,18 @@ const Dashboard = () => {
         </Grid.Col>
       </Grid>
 
-      {/* 今月の家計簿 */}
+      {/* 選択月の家計簿（ハイライト） */}
       <Paper p="xl" radius="lg" withBorder>
         <Group justify="space-between" mb="xl">
-          <Title order={4}>今月の家計簿</Title>
-                <Button 
-                  variant="subtle" 
-                  size="md"
-                  color="orange"
-                  style={{ color: '#F7931E' }}
-                >
-                  {currentMonthString}
-                </Button>
+          <Title order={4}>今月の家計サマリー</Title>
+          <Button 
+            variant="subtle" 
+            size="md"
+            color="orange"
+            style={{ color: '#F7931E' }}
+          >
+            {currentMonthString}
+          </Button>
         </Group>
         
         <Grid gutter={80}>

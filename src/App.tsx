@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { MantineProvider } from '@mantine/core';
+import { MantineProvider, localStorageColorSchemeManager } from '@mantine/core';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import '@mantine/charts/styles.css';
 import { AuthProvider } from './contexts/AuthContext';
+import { AdsProvider } from './contexts/AdsContext';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import MainLayout from './components/Layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import { JournalEntryForm } from './components/JournalEntry/JournalEntryForm';
 import JournalList from './pages/JournalList';
 import AccountSettings from './pages/AccountSettings';
+import MyPage from './pages/MyPage';
+import CalendarPage from './pages/Calendar';
 import Login from './pages/Login';
 import { theme } from './theme/theme';
 
@@ -72,6 +75,8 @@ function AppContent() {
                   element={<JournalList onEdit={handleEdit} />}
                 />
                 <Route path="/account-settings" element={<AccountSettings />} />
+                <Route path="/mypage" element={<MyPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/reports" element={<div>財務レポート（準備中）</div>} />
               </Routes>
             </MainLayout>
@@ -84,10 +89,16 @@ function AppContent() {
 
 function App() {
   return (
-    <MantineProvider theme={theme} defaultColorScheme="light">
+    <MantineProvider 
+      theme={theme} 
+      defaultColorScheme="auto"
+      colorSchemeManager={localStorageColorSchemeManager({ key: 'color-scheme' })}
+    >
       <Router basename="/double-entry-bookkeeping-frontend">
         <AuthProvider>
-          <AppContent />
+          <AdsProvider>
+            <AppContent />
+          </AdsProvider>
         </AuthProvider>
       </Router>
     </MantineProvider>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import type { GroupedAccounts, Account } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 
 // Supabase設定を直接インポート
 const supabaseUrl = 'https://iivyylojvqgucmbyfrqw.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpdnl5bG9qdnFndWNtYnlmcnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3NDg1NjcsImV4cCI6MjA3MzMyNDU2N30.ecmSicRrcBJd1sqFpxZc5Vx9Lls0HFBz5KMb4IEwD5Q'
 
 export const useAccounts = () => {
   const [accounts, setAccounts] = useState<GroupedAccounts | null>(null)
@@ -15,10 +15,14 @@ export const useAccounts = () => {
       setLoading(true)
       setError(null)
 
-      // Edge Functions API を使用
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Unauthorized: no access token')
+
+      // Edge Functions API を使用（ユーザーのアクセストークンで呼び出し）
       const response = await fetch(`${supabaseUrl}/functions/v1/accounts`, {
         headers: {
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
       })
@@ -41,10 +45,13 @@ export const useAccounts = () => {
 
   const createAccount = async (name: string, type: Account['type']) => {
     try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Unauthorized: no access token')
       const response = await fetch(`${supabaseUrl}/functions/v1/accounts`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name, type }),
@@ -88,10 +95,13 @@ export const useAccounts = () => {
 
   const updateAccount = async (id: number, name: string, type: Account['type']) => {
     try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Unauthorized: no access token')
       const response = await fetch(`${supabaseUrl}/functions/v1/accounts`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ id, name, type }),
@@ -143,10 +153,13 @@ export const useAccounts = () => {
 
   const deleteAccount = async (id: number) => {
     try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Unauthorized: no access token')
       const response = await fetch(`${supabaseUrl}/functions/v1/accounts?id=${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
       })

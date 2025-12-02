@@ -53,13 +53,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signInWithGoogle = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/double-entry-bookkeeping-frontend/`,
+          skipBrowserRedirect: true,
         },
       })
       if (error) throw error
+      if (data?.url) {
+        window.location.href = data.url
+      } else {
+        // フォールバック: 自動リダイレクト方式
+        const retry = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/double-entry-bookkeeping-frontend/`,
+          },
+        })
+        if (retry.error) throw retry.error
+      }
     } catch (error) {
       console.error('Error signing in with Google:', error)
       throw error

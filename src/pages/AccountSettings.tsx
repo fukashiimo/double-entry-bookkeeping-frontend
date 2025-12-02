@@ -14,6 +14,8 @@ import {
   Alert,
   Loader,
   Center,
+  useMantineTheme,
+  useMantineColorScheme,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -60,6 +62,11 @@ export default function AccountSettings() {
   const [subName, setSubName] = useState('');
   const [subEditingId, setSubEditingId] = useState<number | null>(null);
   const [subSubmitting, setSubSubmitting] = useState(false);
+  const theme = useMantineTheme();
+  const { colorScheme } = useMantineColorScheme();
+  const surfaceBg = colorScheme === 'dark' ? theme.colors.dark[6] : '#f8f9fa';
+  const surfaceBorder = colorScheme === 'dark' ? '1px solid rgba(255,255,255,0.15)' : '1px solid #e9ecef';
+  const surfaceTextMuted = colorScheme === 'dark' ? theme.colors.gray[6] : '#6c757d';
   
   const handleAddAccount = async () => {
     if (!selectedType || !accountName.trim()) return;
@@ -157,20 +164,20 @@ export default function AccountSettings() {
             <Stack gap="xs">
               {accountList.length === 0 ? (
                 <Box p="md" style={{ 
-                  backgroundColor: '#f8f9fa', 
+                  backgroundColor: surfaceBg, 
                   borderRadius: '6px',
-                  border: '1px solid #e9ecef',
+                  border: surfaceBorder,
                   textAlign: 'center',
-                  color: '#6c757d'
+                  color: surfaceTextMuted
                 }}>
                   勘定科目がありません
                 </Box>
               ) : (
                 accountList.map((account: any) => (
                   <Group key={account.id} justify="space-between" p="xs" style={{ 
-                    backgroundColor: '#f8f9fa', 
+                    backgroundColor: surfaceBg, 
                     borderRadius: '6px',
-                    border: '1px solid #e9ecef'
+                    border: surfaceBorder
                   }}>
                     <span style={{ fontWeight: 500 }}>{account.name}</span>
                     <Menu position="bottom-start">
@@ -316,7 +323,7 @@ export default function AccountSettings() {
           </Group>
           <Stack gap="xs">
             {subList.map((item) => (
-              <Group key={item.id} justify="space-between" p="xs" style={{ backgroundColor: '#f8f9fa', borderRadius: '6px', border: '1px solid #e9ecef' }}>
+              <Group key={item.id} justify="space-between" p="xs" style={{ backgroundColor: surfaceBg, borderRadius: '6px', border: surfaceBorder }}>
                 <span>{item.name}</span>
                 <Group gap="xs">
                   <ActionIcon size="sm" variant="subtle" onClick={() => { setSubEditingId(item.id); setSubName(item.name); }}>

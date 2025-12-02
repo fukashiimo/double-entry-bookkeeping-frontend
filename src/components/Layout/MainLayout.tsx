@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppShell, Burger, Group, Title, UnstyledButton, Text, Box, Stack, ActionIcon, Affix, Menu, Avatar } from '@mantine/core';
+import { useMantineColorScheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { 
   IconDashboard, 
@@ -8,18 +9,23 @@ import {
   IconChartPie,
   IconPlus,
   IconList,
-  IconLogout,
-  IconUser
+  IconUser,
+  IconSun,
+  IconMoon,
+  IconCalendarStats,
 } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
+import AdBanner from '../Ads/AdBanner';
 
 const mainLinks = [
   { icon: IconDashboard, label: 'ダッシュボード', path: '/' },
   { icon: IconBook, label: '仕訳帳', path: '/journal-list' },
   { icon: IconPlus, label: '仕訳入力', path: '/journal-entry' },
+  { icon: IconCalendarStats, label: 'カレンダー', path: '/calendar' },
   { icon: IconList, label: '勘定科目設定', path: '/account-settings' },
   { icon: IconChartPie, label: '財務レポート', path: '/reports' },
   { icon: IconSettings, label: '設定', path: '/settings' },
+  { icon: IconUser, label: 'マイページ', path: '/mypage' },
 ];
 
 interface MainLayoutProps {
@@ -30,16 +36,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [opened, { toggle }] = useDisclosure();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/login');
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
-  };
+  const toggleColorScheme = () => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark');
 
   const mainItems = mainLinks.map((link) => {
     const isActive = location.pathname === link.path;
@@ -88,7 +88,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
       style={{ minHeight: '100vh' }}
     >
       <AppShell.Header>
-        <Group h="100%" px="xl" justify="space-between" style={{ backgroundColor: '#47A7EF' }}>
+        <Group
+          h="100%"
+          px="xl"
+          justify="space-between"
+          style={(theme) => ({
+            backgroundColor: colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.blue[6],
+          })}
+        >
           <Group>
             <Burger 
               opened={opened} 
@@ -100,7 +107,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <Title order={3} c="white" style={{ fontWeight: 500 }}>複式簿記</Title>
           </Group>
           
-          <Menu shadow="md" width={200}>
+          <Group gap="xs">
+            <ActionIcon variant="subtle" size="lg" radius="xl" onClick={toggleColorScheme} aria-label="Toggle color scheme">
+              {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
+            </ActionIcon>
+
+            <Menu shadow="md" width={200}>
             <Menu.Target>
               <ActionIcon variant="subtle" size="lg" radius="xl">
                 <Avatar size="sm" radius="xl" color="white">
@@ -112,46 +124,56 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <Menu.Dropdown>
               <Menu.Label>{user?.email}</Menu.Label>
               <Menu.Divider />
-              <Menu.Item
-                leftSection={<IconLogout size={16} />}
-                onClick={handleSignOut}
-                color="red"
-              >
-                ログアウト
-              </Menu.Item>
+              <Menu.Item onClick={() => navigate('/mypage')}>マイページ</Menu.Item>
             </Menu.Dropdown>
-          </Menu>
+            </Menu>
+          </Group>
         </Group>
       </AppShell.Header>
 
       <AppShell.Navbar 
         p="md" 
-        style={{
-          backgroundColor: '#F8F7FF',
-          borderRight: '1px solid rgba(71, 51, 255, 0.2)',
+        style={(theme) => ({
+          backgroundColor: colorScheme === 'dark' ? theme.colors.dark[7] : '#F8F7FF',
+          borderRight: colorScheme === 'dark'
+            ? '1px solid rgba(255, 255, 255, 0.1)'
+            : '1px solid rgba(71, 51, 255, 0.2)',
           zIndex: 1000,
-        }}
+        })}
       >
-        <Box p="md">
-          <Text size="sm" fw={500} c="dimmed" mb="lg" px="md">
-            メニュー
-          </Text>
-          <Stack gap="xs">{mainItems}</Stack>
+        <Box 
+          p="md"
+          style={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box>
+            <Text size="sm" fw={500} c="dimmed" mb="lg" px="md">
+              メニュー
+            </Text>
+            <Stack gap="xs">{mainItems}</Stack>
+          </Box>
+
+          <Box mt="lg" />
         </Box>
       </AppShell.Navbar>
 
       <AppShell.Main>
         <Box
-          style={{
+          style={(theme) => ({
             maxWidth: '1400px',
             margin: '0 auto',
             width: '100%',
-            backgroundColor: '#FDFCFB',
+            backgroundColor: colorScheme === 'dark' ? theme.colors.dark[8] : '#FDFCFB',
             padding: '24px',
             minHeight: 'calc(100vh - 70px)',
-          }}
+          })}
         >
           {children}
+          <AdBanner placement="bottom" />
         </Box>
         
         {/* モバイル用フローティングボタン */}

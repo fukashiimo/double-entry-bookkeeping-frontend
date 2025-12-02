@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import type { JournalEntry } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 
 // Supabase設定を直接インポート
 const supabaseUrl = 'https://iivyylojvqgucmbyfrqw.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpdnl5bG9qdnFndWNtYnlmcnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3NDg1NjcsImV4cCI6MjA3MzMyNDU2N30.ecmSicRrcBJd1sqFpxZc5Vx9Lls0HFBz5KMb4IEwD5Q'
 
 export const useJournalEntries = () => {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
@@ -15,10 +15,13 @@ export const useJournalEntries = () => {
       setLoading(true)
       setError(null)
 
-      // Edge Functions API を使用
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Unauthorized: no access token')
+      // Edge Functions API を使用（ユーザーのアクセストークンで呼び出し）
       const response = await fetch(`${supabaseUrl}/functions/v1/journal-entries`, {
         headers: {
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
       })
@@ -47,10 +50,13 @@ export const useJournalEntries = () => {
     amount: number
   }) => {
     try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Unauthorized: no access token')
       const response = await fetch(`${supabaseUrl}/functions/v1/journal-entries`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(entryData),

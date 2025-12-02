@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 // Supabase設定を直接インポート
 const supabaseUrl = 'https://iivyylojvqgucmbyfrqw.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpdnl5bG9qdnFndWNtYnlmcnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc3NDg1NjcsImV4cCI6MjA3MzMyNDU2N30.ecmSicRrcBJd1sqFpxZc5Vx9Lls0HFBz5KMb4IEwD5Q'
 
 export interface DashboardData {
   year: number
@@ -32,6 +32,11 @@ export interface DashboardData {
     totalExpenses: number
     netIncome: number
   }
+  dailyTotals: Array<{
+    date: string
+    income: number
+    expenses: number
+  }>
   balanceSheet: {
     assets: Array<{ name: string; amount: number }>
     liabilities: Array<{ name: string; amount: number }>
@@ -56,12 +61,21 @@ export const useDashboard = (year?: number, month?: number) => {
 
       console.log('Fetching dashboard data for:', currentYear, currentMonth)
 
-      // ダッシュボード専用APIを使用
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) {
+        // 未ログイン/セッション未確立時は静かにスキップ
+        setData(null)
+        setLoading(false)
+        return
+      }
+
+      // ダッシュボード専用APIを使用（ユーザーのアクセストークンで呼び出し）
       const response = await fetch(
         `${supabaseUrl}/functions/v1/dashboard?year=${currentYear}&month=${currentMonth}`,
         {
           headers: {
-            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
         }

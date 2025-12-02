@@ -86,6 +86,33 @@ VITE_SUPABASE_URL=https://snwmoptdzwlrtfhdawrm.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
+## 💰 Google AdSense 設定
+
+1) `index.html` の AdSense スクリプトの `client` を Publisher ID に置き換え
+
+```html
+<!-- head 内 -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+```
+
+2) `public/ads.txt` の Publisher ID を置き換え
+
+```text
+google.com, pub-XXXXXXXXXXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+```
+
+3) （任意）手動広告ユニットを使う場合は `src/components/Ads/AdSenseUnit.tsx` を配置し、`slot` に広告枠IDを設定して使用
+
+```tsx
+import AdSenseUnit from './components/Ads/AdSenseUnit'
+
+<AdSenseUnit slot="1234567890" />
+```
+
+注意:
+- GitHub Pages のプロジェクトページ（`username.github.io/repo`）では `ads.txt` をルートに置けません。独自ドメイン、またはユーザーページ（`username.github.io`）での運用を推奨します。
+- `public/robots.txt` はクロール許可になっています。審査・運用開始前提の設定です。
+
 ## 📚 機能
 
 ### ダッシュボード
