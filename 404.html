@@ -6,13 +6,12 @@
     <script type="text/javascript">
       // GitHub Pages用のSPAルーティング修正
       // 現在のパスを取得してindex.htmlにリダイレクト
-      var pathSegmentsToKeep = 1; // double-entry-bookkeepingの部分を保持
-      
+      // カスタムドメイン直下で動かす場合のSPAルーティング修正
       var l = window.location;
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        '/?/' +
+        l.pathname.slice(1).split('/').join('/').replace(/&/g, '~and~') +
         (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
         l.hash
       );
