@@ -72,6 +72,7 @@ export const MonthlyCalendar = ({ year, month, dailyTotals }: MonthlyCalendarPro
   }, [daysInMonth, monthString, startDay, totalsIndex, year])
 
   const gap = isMobile ? theme.spacing.xs : theme.spacing.sm
+  const cellHeight = isMobile ? 96 : 132
 
   return (
     <Stack gap="xs">
@@ -121,10 +122,11 @@ export const MonthlyCalendar = ({ year, month, dailyTotals }: MonthlyCalendarPro
                 border: `1px solid ${theme.colors.gray[3]}`,
                 backgroundColor: background,
                 padding: isMobile ? theme.spacing.xs : theme.spacing.sm,
-                minHeight: isMobile ? 90 : 120,
+                height: cellHeight,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: theme.spacing.xs,
+                overflow: 'hidden',
               }}
             >
               <Text fw={600} size={isMobile ? 'sm' : 'md'}>
@@ -135,7 +137,12 @@ export const MonthlyCalendar = ({ year, month, dailyTotals }: MonthlyCalendarPro
                   <Text size="xs" c="dimmed">
                     収入
                   </Text>
-                  <Text size={isMobile ? 'xs' : 'sm'} fw={600} c="green.6">
+                  <Text
+                    size={isMobile ? 'xs' : 'sm'}
+                    fw={600}
+                    c="green.6"
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
                     {formatCurrency(totals.income)}
                   </Text>
                 </Group>
@@ -143,7 +150,12 @@ export const MonthlyCalendar = ({ year, month, dailyTotals }: MonthlyCalendarPro
                   <Text size="xs" c="dimmed">
                     支出
                   </Text>
-                  <Text size={isMobile ? 'xs' : 'sm'} fw={600} c="red.6">
+                  <Text
+                    size={isMobile ? 'xs' : 'sm'}
+                    fw={600}
+                    c="red.6"
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
                     {formatCurrency(totals.expenses)}
                   </Text>
                 </Group>

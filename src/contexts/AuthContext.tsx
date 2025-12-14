@@ -56,8 +56,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/double-entry-bookkeeping-frontend/`,
+          redirectTo: `${window.location.origin}/`,
           skipBrowserRedirect: true,
+          queryParams: {
+            prompt: 'select_account', // 毎回アカウント選択画面を表示
+          },
         },
       })
       if (error) throw error
@@ -68,7 +71,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const retry = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: `${window.location.origin}/double-entry-bookkeeping-frontend/`,
+            redirectTo: `${window.location.origin}/`,
+            queryParams: {
+              prompt: 'select_account',
+            },
           },
         })
         if (retry.error) throw retry.error
@@ -84,7 +90,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
-          redirectTo: `${window.location.origin}/double-entry-bookkeeping-frontend/`,
+          redirectTo: `${window.location.origin}/`,
         },
       })
       if (error) throw error
@@ -99,7 +105,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'azure',
         options: {
-          redirectTo: `${window.location.origin}/double-entry-bookkeeping-frontend/`,
+          redirectTo: `${window.location.origin}/`,
           scopes: 'email',
         },
       })
@@ -112,8 +118,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut()
+      // セッションを完全にクリア
+      const { error } = await supabase.auth.signOut({ scope: 'global' })
       if (error) throw error
+      // ローカルストレージもクリア（念のため）
+      setUser(null)
+      setSession(null)
     } catch (error) {
       console.error('Error signing out:', error)
       throw error

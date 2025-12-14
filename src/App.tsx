@@ -94,7 +94,7 @@ function App() {
       defaultColorScheme="auto"
       colorSchemeManager={localStorageColorSchemeManager({ key: 'color-scheme' })}
     >
-      <Router basename="/double-entry-bookkeeping-frontend">
+      <Router>
         <AuthProvider>
           <AdsProvider>
             <AppContent />
