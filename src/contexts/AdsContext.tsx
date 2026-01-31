@@ -46,16 +46,28 @@ export const AdsProvider = ({ children }: AdsProviderProps) => {
         .from('profiles')
         .select('ads_enabled')
         .single()
-      if (error && String(error.message).toLowerCase().includes('row')) {
+      
+      // 行が存在しない場合（PGRST116エラー）またはエラーメッセージに"row"が含まれる場合
+      if (error && (error.code === 'PGRST116' || String(error.message).toLowerCase().includes('row'))) {
         // 行が無い -> 作成
-        const { data: inserted } = await supabase
+        const { data: inserted, error: insertError } = await supabase
           .from('profiles')
           .insert([{ ads_enabled: true }])
           .select('ads_enabled')
           .single()
-        if (inserted) setAdsEnabled(Boolean(inserted.ads_enabled))
+        if (inserted) {
+          setAdsEnabled(Boolean(inserted.ads_enabled))
+        } else if (insertError) {
+          console.error('Error creating profile:', insertError)
+        }
         return
       }
+      
+      if (error) {
+        console.error('Error fetching profile:', error)
+        return
+      }
+      
       if (data && typeof data.ads_enabled === 'boolean') {
         setAdsEnabled(Boolean(data.ads_enabled))
       }

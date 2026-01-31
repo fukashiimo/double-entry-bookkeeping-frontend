@@ -174,13 +174,13 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
         <Grid mb="md">
           {/* 借方 */}
           <Grid.Col span={6}>
-            <Paper p="xl" withBorder radius="lg" style={{ 
-              backgroundColor: '#F0FDF4', 
-              borderColor: '#86EFAC',
+            <Paper p="xl" withBorder radius="md" style={{ 
+              backgroundColor: 'var(--debit-bg)', 
+              borderColor: 'var(--debit-border)',
               borderWidth: '2px'
             }}>
               <Text size="sm" fw={600} c="teal" mb="lg" style={{ 
-                color: '#16A34A',
+                color: 'var(--debit-text)',
                 fontSize: '16px',
                 letterSpacing: '0.5px'
               }}>借方</Text>
@@ -214,13 +214,13 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
 
           {/* 貸方 */}
           <Grid.Col span={6}>
-            <Paper p="xl" withBorder radius="lg" style={{ 
-              backgroundColor: '#FFF5F5', 
-              borderColor: '#FFB3BA',
+            <Paper p="xl" withBorder radius="md" style={{ 
+              backgroundColor: 'var(--credit-bg)', 
+              borderColor: 'var(--credit-border)',
               borderWidth: '2px'
             }}>
               <Text size="sm" fw={600} c="pink" mb="lg" style={{ 
-                color: '#E53E3E',
+                color: 'var(--credit-text)',
                 fontSize: '16px',
                 letterSpacing: '0.5px'
               }}>貸方</Text>

@@ -1,4 +1,4 @@
-import { createTheme } from '@mantine/core';
+import { createTheme, type MantineTheme } from '@mantine/core';
 
 export const theme = createTheme({
   primaryColor: 'orange',
@@ -99,16 +99,16 @@ export const theme = createTheme({
   },
   components: {
     AppShell: {
-      styles: {
+      styles: (_theme: MantineTheme) => ({
         header: {
-          backgroundColor: '#F7FBFF',
-          borderBottom: '1px solid rgba(31, 145, 235, 0.2)',
+          backgroundColor: 'var(--app-shell-header-bg)',
+          borderBottom: '1px solid var(--app-shell-header-border)',
         },
         navbar: {
-          backgroundColor: '#F8F7FF',
-          borderRight: '1px solid rgba(71, 51, 255, 0.2)',
+          backgroundColor: 'var(--app-shell-navbar-bg)',
+          borderRight: '1px solid var(--app-shell-navbar-border)',
         },
-      },
+      }),
     },
     Button: {
       defaultProps: {
@@ -143,38 +143,42 @@ export const theme = createTheme({
       },
     },
     Paper: {
-      styles: {
+      styles: (_theme: MantineTheme) => ({
         root: {
-          border: '1px solid rgba(0, 0, 0, 0.08)',
+          backgroundColor: 'var(--surface-bg)',
+          color: 'var(--mantine-color-text)',
+          border: '1px solid var(--surface-border)',
           transition: 'all 0.2s ease',
           '&:hover': {
-            borderColor: 'rgba(0, 0, 0, 0.12)',
+            borderColor: 'var(--surface-border-hover)',
           },
         },
-      },
+      }),
     },
     Card: {
-      styles: {
+      styles: (_theme: MantineTheme) => ({
         root: {
-          border: '1px solid rgba(0, 0, 0, 0.08)',
+          backgroundColor: 'var(--surface-bg)',
+          color: 'var(--mantine-color-text)',
+          border: '1px solid var(--surface-border)',
           transition: 'all 0.2s ease',
           '&:hover': {
-            borderColor: 'rgba(0, 0, 0, 0.12)',
+            borderColor: 'var(--surface-border-hover)',
           },
         },
-      },
+      }),
     },
     Table: {
-      styles: {
+      styles: (_theme: MantineTheme) => ({
         root: {
           borderRadius: '8px',
           overflow: 'hidden',
-          border: '1px solid rgba(0, 0, 0, 0.08)',
+          border: '1px solid var(--surface-border)',
         },
         thead: {
-          backgroundColor: 'rgba(247, 147, 30, 0.03)',
+          backgroundColor: 'var(--table-thead-bg)',
         },
-      },
+      }),
     },
   },
 });

@@ -1,4 +1,5 @@
-import { Container, Paper, Title, Text, Button, Stack, Box } from '@mantine/core'
+import { Container, Paper, Title, Text, Button, Stack, Box, useMantineTheme } from '@mantine/core'
+import { useMantineColorScheme } from '@mantine/core'
 import { IconBrandGoogle, IconBrandApple, IconBrandWindows } from '@tabler/icons-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useState } from 'react'
@@ -6,6 +7,8 @@ import { useState } from 'react'
 export default function Login() {
   const { signInWithGoogle, signInWithApple, signInWithMicrosoft } = useAuth()
   const [loading, setLoading] = useState<string | null>(null)
+  const theme = useMantineTheme()
+  const { colorScheme } = useMantineColorScheme()
 
   const handleGoogleSignIn = async () => {
     try {
@@ -54,7 +57,7 @@ export default function Login() {
         height: '100vh',
         display: 'grid',
         placeItems: 'center',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: colorScheme === 'dark' ? theme.colors.dark[8] : theme.colors.gray[0],
       }}
     >
       <Container size={420} my={40}>

@@ -1,4 +1,5 @@
 import { Box, Group, Stack, Text, useMantineTheme } from '@mantine/core'
+import { useMantineColorScheme } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { useMemo } from 'react'
 
@@ -36,6 +37,7 @@ const formatCurrency = (value: number) => {
 
 export const MonthlyCalendar = ({ year, month, dailyTotals }: MonthlyCalendarProps) => {
   const theme = useMantineTheme()
+  const { colorScheme } = useMantineColorScheme()
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`)
 
   const totalsIndex = useMemo(() => {
@@ -110,16 +112,27 @@ export const MonthlyCalendar = ({ year, month, dailyTotals }: MonthlyCalendarPro
 
           const { totals, day, key } = cell
           const hasTransactions = Math.abs(totals.income) > 0 || Math.abs(totals.expenses) > 0
-          const background = hasTransactions
-            ? theme.colors.orange?.[0] ?? theme.colors.gray[0]
-            : theme.white
+          
+          // ダークモード対応の背景色
+          const background = colorScheme === 'dark'
+            ? hasTransactions
+              ? theme.colors.dark[6]
+              : theme.colors.dark[7]
+            : hasTransactions
+              ? theme.colors.orange?.[0] ?? theme.colors.gray[0]
+              : theme.white
+          
+          // ダークモード対応のボーダー色
+          const borderColor = colorScheme === 'dark'
+            ? theme.colors.dark[4]
+            : theme.colors.gray[3]
 
           return (
             <Box
               key={key}
               style={{
                 borderRadius: theme.radius.md,
-                border: `1px solid ${theme.colors.gray[3]}`,
+                border: `1px solid ${borderColor}`,
                 backgroundColor: background,
                 padding: isMobile ? theme.spacing.xs : theme.spacing.sm,
                 height: cellHeight,

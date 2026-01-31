@@ -32,7 +32,9 @@ const CalendarPage = () => {
     );
   }
 
-  if (error) {
+  const isNoDataError = error?.includes('status: 500');
+
+  if (error && !isNoDataError) {
     return (
       <Alert icon={<IconAlertCircle size="1rem" />} title="エラー" color="red">
         {error}
@@ -40,7 +42,7 @@ const CalendarPage = () => {
     );
   }
 
-  if (!dashboardData) {
+  if (!dashboardData && !isNoDataError) {
     return (
       <Alert icon={<IconAlertCircle size="1rem" />} title="データなし" color="yellow">
         データを取得できませんでした。
@@ -48,7 +50,9 @@ const CalendarPage = () => {
     );
   }
 
-  const { year, month, dailyTotals } = dashboardData;
+  const year = dashboardData?.year ?? selectedYear;
+  const month = dashboardData?.month ?? selectedMonthNumber;
+  const dailyTotals = dashboardData?.dailyTotals ?? [];
   const currentMonthString = `${selectedYear}年${selectedMonthNumber}月`;
 
   return (
@@ -62,7 +66,13 @@ const CalendarPage = () => {
         </Text>
       </Box>
 
-      <Paper p="xl" radius="lg" withBorder>
+      {isNoDataError && (
+        <Alert icon={<IconAlertCircle size="1rem" />} title="データなし" color="yellow">
+          この月のデータはありません。
+        </Alert>
+      )}
+
+      <Paper p="xl" radius="md" withBorder>
         <Group justify="space-between" mb="lg">
           <Group gap="xs" align="center">
             <ActionIcon
@@ -96,6 +106,5 @@ const CalendarPage = () => {
 };
 
 export default CalendarPage;
-
 
 

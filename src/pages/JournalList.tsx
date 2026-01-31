@@ -188,28 +188,28 @@ export default function JournalList({ onEdit }: JournalListProps) {
                 <Table.Td>{new Date(item.date).toLocaleDateString('ja-JP')}</Table.Td>
                 <Table.Td style={{ 
                   fontWeight: 500, 
-                  color: '#16A34A', 
-                  backgroundColor: '#F0FDF4',
+                  color: 'var(--debit-text)', 
+                  backgroundColor: 'var(--debit-bg)',
                   borderRadius: '6px',
                   padding: '8px 12px',
-                  border: '1px solid #86EFAC'
+                  border: '1px solid var(--debit-border)'
                 }}>
                   {item.debit_account_name}
                   {item.debit_subaccount_name ? (
-                    <span style={{ color: '#166534', marginLeft: 6, fontSize: '0.9em' }}>（{item.debit_subaccount_name}）</span>
+                    <span style={{ color: 'var(--debit-subtext)', marginLeft: 6, fontSize: '0.9em' }}>（{item.debit_subaccount_name}）</span>
                   ) : null}
                 </Table.Td>
                 <Table.Td style={{ 
                   fontWeight: 500, 
-                  color: '#E53E3E', 
-                  backgroundColor: '#FFF5F5',
+                  color: 'var(--credit-text)', 
+                  backgroundColor: 'var(--credit-bg)',
                   borderRadius: '6px',
                   padding: '8px 12px',
-                  border: '1px solid #FFB3BA'
+                  border: '1px solid var(--credit-border)'
                 }}>
                   {item.credit_account_name}
                   {item.credit_subaccount_name ? (
-                    <span style={{ color: '#C53030', marginLeft: 6, fontSize: '0.9em' }}>（{item.credit_subaccount_name}）</span>
+                    <span style={{ color: 'var(--credit-subtext)', marginLeft: 6, fontSize: '0.9em' }}>（{item.credit_subaccount_name}）</span>
                   ) : null}
                 </Table.Td>
                 <Table.Td style={{ textAlign: 'right', fontWeight: 600, fontSize: '14px' }}>
@@ -267,4 +267,3 @@ export default function JournalList({ onEdit }: JournalListProps) {
     </Stack>
   );
 }
-

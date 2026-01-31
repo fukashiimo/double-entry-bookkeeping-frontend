@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppShell, Burger, Group, Title, UnstyledButton, Text, Box, Stack, ActionIcon, Affix, Menu, Avatar } from '@mantine/core';
-import { useMantineColorScheme } from '@mantine/core';
+import { useMantineColorScheme, useMantineTheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { 
   IconDashboard, 
@@ -38,6 +38,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const { user } = useAuth();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const theme = useMantineTheme();
+  const isDark = colorScheme === 'dark';
 
   const toggleColorScheme = () => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark');
 
@@ -53,15 +55,21 @@ export default function MainLayout({ children }: MainLayoutProps) {
         }}
         px="xl"
         py="md"
-        style={(theme) => ({
+        style={() => ({
           display: 'flex',
           alignItems: 'center',
           width: '100%',
           borderRadius: theme.radius.md,
-          color: isActive ? '#7566FF' : '#7A736C',
-          backgroundColor: isActive ? '#E8E5FF' : 'transparent',
+          color: isActive
+            ? isDark ? theme.colors.orange[2] : '#7566FF'
+            : isDark ? theme.colors.gray[1] : '#7A736C',
+          backgroundColor: isActive
+            ? isDark ? 'rgba(255, 179, 30, 0.18)' : '#E8E5FF'
+            : isDark ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
           '&:hover': {
-            backgroundColor: isActive ? '#D1CCFF' : '#F7F5F3',
+            backgroundColor: isActive
+              ? isDark ? 'rgba(255, 179, 30, 0.26)' : '#D1CCFF'
+              : isDark ? 'rgba(255, 255, 255, 0.05)' : '#F7F5F3',
           },
           transition: 'all 0.2s ease',
         })}
@@ -121,7 +129,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               </ActionIcon>
             </Menu.Target>
 
-            <Menu.Dropdown>
+            <Menu.Dropdown style={{ borderRadius: 8 }}>
               <Menu.Label>{user?.email}</Menu.Label>
               <Menu.Divider />
               <Menu.Item onClick={() => navigate('/mypage')}>マイページ</Menu.Item>

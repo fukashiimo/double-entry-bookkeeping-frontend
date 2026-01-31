@@ -61,29 +61,29 @@ const Dashboard = () => {
   console.log('================================');
 
   // 円グラフ用のデータを準備（色を追加）
-  const incomeChartData = incomeData.map((item, index) => ({
-    ...item,
-    color: colors[index % colors.length]
-  }));
-
   const expenseChartData = expenseData.map((item, index) => ({
     ...item,
     color: colors[index % colors.length]
   }));
 
-  // 貸借対照表データはAPIから取得済み
-  const balanceSheetData = {
+  const hasBalanceSheetData = Boolean(
+    dashboardData.balanceSheet &&
+      (dashboardData.balanceSheet.assets.length > 0 ||
+        dashboardData.balanceSheet.liabilities.length > 0 ||
+        dashboardData.balanceSheet.equity.length > 0)
+  );
+  const balanceSheetData = hasBalanceSheetData ? dashboardData.balanceSheet : {
     assets: accounts.assets.map(account => ({
       name: account.name,
-      amount: 0 // 簡略化のため0に設定
+      amount: 0
     })),
     liabilities: accounts.liabilities.map(account => ({
       name: account.name,
-      amount: 0 // 簡略化のため0に設定
+      amount: 0
     })),
     equity: accounts.equity.map(account => ({
       name: account.name,
-      amount: 0 // 簡略化のため0に設定
+      amount: 0
     })),
   };
 
@@ -98,111 +98,12 @@ const Dashboard = () => {
 
   return (
     <Stack gap="xl">
-      <Grid gutter="xl">
-        {/* 貸借対照表 */}
-        <Grid.Col span={12}>
-          <Paper p="xl" radius="lg" withBorder>
-            <Title order={4} mb="xl">貸借対照表</Title>
-            <Grid gutter="xl">
-              {/* 資産 */}
-              <Grid.Col span={6}>
-                <Text size="sm" c="dimmed" mb="md">資産</Text>
-                {balanceSheetData.assets.map((item, index) => (
-                  <Group key={index} justify="space-between" mb="md">
-                    <Text size="sm">{item.name}</Text>
-                    <Text size="sm">{item.amount.toLocaleString()}円</Text>
-                  </Group>
-                ))}
-                <Group justify="space-between" mt="xl" pt="md" style={{ borderTop: '1px solid #eee' }}>
-                  <Text fw={500}>合計</Text>
-                  <Text fw={500}>
-                    {balanceSheetData.assets.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}円
-                  </Text>
-                </Group>
-              </Grid.Col>
-
-              {/* 負債・純資産（分割表示） */}
-              <Grid.Col span={6}>
-                <Text size="sm" c="dimmed" mb="md">負債</Text>
-                {balanceSheetData.liabilities.map((item, index) => (
-                  <Group key={`liab-${index}`} justify="space-between" mb="md">
-                    <Text size="sm">{item.name}</Text>
-                    <Text size="sm">{item.amount.toLocaleString()}円</Text>
-                  </Group>
-                ))}
-
-                <Text size="sm" c="dimmed" mb="md" mt="md">純資産</Text>
-                {balanceSheetData.equity.map((item, index) => (
-                  <Group key={`equity-${index}`} justify="space-between" mb="md">
-                    <Text size="sm">{item.name}</Text>
-                    <Text size="sm">{item.amount.toLocaleString()}円</Text>
-                  </Group>
-                ))}
-
-                {/* 左側（資産）と同じスタイルで合計表示を揃える */}
-                <Group justify="space-between" mt="xl" pt="md" style={{ borderTop: '1px solid #eee' }}>
-                  <Text fw={500}>合計</Text>
-                  <Text fw={500}>{totalLiabilitiesAndEquity.toLocaleString()}円</Text>
-                </Group>
-              </Grid.Col>
-            </Grid>
-          </Paper>
-        </Grid.Col>
-
-      </Grid>
-
-      {/* 損益計算書 */}
-      <Grid gutter="xl">
-        <Grid.Col span={12}>
-          <Paper p="xl" radius="lg" withBorder>
-            <Title order={4} mb="xl">損益計算書</Title>
-            <Grid gutter="xl">
-              {/* 収益 */}
-              <Grid.Col span={6}>
-                <Text size="sm" c="dimmed" mb="md">収益</Text>
-                {incomeData.map((item, index) => (
-                  <Group key={index} justify="space-between" mb="md">
-                    <Text size="sm">{item.name}</Text>
-                    <Text size="sm" fw={500}>¥{item.value.toLocaleString()}</Text>
-                  </Group>
-                ))}
-                <Group justify="space-between" mb="md" pt="md" style={{ borderTop: '1px solid #e9ecef' }}>
-                  <Text size="sm" fw={600}>収益合計</Text>
-                  <Text size="sm" fw={600}>¥{totalRevenue.toLocaleString()}</Text>
-                </Group>
-              </Grid.Col>
-
-              {/* 費用 */}
-              <Grid.Col span={6}>
-                <Text size="sm" c="dimmed" mb="md">費用</Text>
-                {expenseData.map((item, index) => (
-                  <Group key={index} justify="space-between" mb="md">
-                    <Text size="sm">{item.name}</Text>
-                    <Text size="sm" fw={500}>¥{item.value.toLocaleString()}</Text>
-                  </Group>
-                ))}
-                <Group justify="space-between" mb="md" pt="md" style={{ borderTop: '1px solid #e9ecef' }}>
-                  <Text size="sm" fw={600}>費用合計</Text>
-                  <Text size="sm" fw={600}>¥{totalExpenses.toLocaleString()}</Text>
-                </Group>
-                <Group justify="space-between" mb="md" pt="md" style={{ borderTop: '2px solid #e9ecef' }}>
-                  <Text size="md" fw={700}>当期純利益</Text>
-                  <Text size="md" fw={700} style={{ color: netIncome >= 0 ? '#16A34A' : '#DC2626' }}>
-                    ¥{netIncome.toLocaleString()}
-                  </Text>
-                </Group>
-              </Grid.Col>
-            </Grid>
-          </Paper>
-        </Grid.Col>
-      </Grid>
-
       {/* 選択月の家計簿（ハイライト） */}
-      <Paper p="xl" radius="lg" withBorder>
+      <Paper p="xl" radius="md" withBorder>
         <Group justify="space-between" mb="xl">
-          <Title order={4}>今月の家計サマリー</Title>
-          <Button 
-            variant="subtle" 
+          <Title order={4}>{currentMonthString}の家計サマリー</Title>
+          <Button
+            variant="subtle"
             size="md"
             color="orange"
             style={{ color: '#F7931E' }}
@@ -210,31 +111,11 @@ const Dashboard = () => {
             {currentMonthString}
           </Button>
         </Group>
-        
+
         <Grid gutter={80}>
           <Grid.Col span={{ base: 12, lg: 8 }}>
             <Container size="100%" p={0}>
               <Grid gutter="xl">
-                <Grid.Col span={{ base: 12, sm: 6 }}>
-                  <Stack align="center">
-                    <Text size="sm" c="dimmed">収益</Text>
-                    <Box w={{ base: 240, sm: 280 }} h={{ base: 240, sm: 280 }}>
-                      {incomeChartData.length > 0 ? (
-                        <PieChart
-                          data={incomeChartData}
-                          withLabels
-                          labelsType="percent"
-                          tooltipDataSource="segment"
-                          valueFormatter={(value) => `¥${value.toLocaleString()}`}
-                        />
-                      ) : (
-                        <Stack align="center" justify="center" h="100%">
-                          <Text size="sm" c="dimmed">データがありません</Text>
-                        </Stack>
-                      )}
-                    </Box>
-                  </Stack>
-                </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
                   <Stack align="center">
                     <Text size="sm" c="dimmed">支出</Text>
@@ -260,30 +141,130 @@ const Dashboard = () => {
           </Grid.Col>
 
           <Grid.Col span={{ base: 12, lg: 4 }}>
-            <Paper withBorder p="xl" radius="lg" style={{ height: '100%', minHeight: '280px' }}>
+          <Paper withBorder p="xl" radius="md" style={{ height: '100%', minHeight: '280px' }}>
               <Stack justify="center" h="100%">
                 <Text size="sm" c="dimmed" mb="lg">収支サマリー</Text>
                 <Stack gap="lg">
-                  <Group justify="space-between">
+                  <Stack gap={4}>
                     <Text size="sm">収益</Text>
-                    <Text size="lg" fw={500}>¥{summary.totalRevenue.toLocaleString()}</Text>
-                  </Group>
-                  <Group justify="space-between">
+                    <Group gap="xs" align="baseline">
+                      <Text size="lg" fw={600} c="green">+{summary.totalRevenue.toLocaleString()}</Text>
+                      <Text size="sm" c="dimmed">円</Text>
+                    </Group>
+                  </Stack>
+                  <Stack gap={4}>
                     <Text size="sm">支出</Text>
-                    <Text size="lg" fw={500}>¥{summary.totalExpenses.toLocaleString()}</Text>
-                  </Group>
-                  <Group justify="space-between">
-                    <Text size="sm">利益</Text>
-                    <Text size="lg" fw={500} style={{ color: summary.netIncome >= 0 ? '#16A34A' : '#E53E3E' }}>
-                      ¥{summary.netIncome.toLocaleString()}
-                    </Text>
-                  </Group>
+                    <Group gap="xs" align="baseline">
+                      <Text size="lg" fw={600} c="red">-{summary.totalExpenses.toLocaleString()}</Text>
+                      <Text size="sm" c="dimmed">円</Text>
+                    </Group>
+                  </Stack>
                 </Stack>
               </Stack>
             </Paper>
           </Grid.Col>
         </Grid>
       </Paper>
+
+      <Grid gutter="xl">
+        {/* 貸借対照表 */}
+        <Grid.Col span={12}>
+          <Paper p="xl" radius="md" withBorder>
+            <Title order={4} mb="xl">貸借対照表</Title>
+            <Grid gutter="xl">
+              {/* 資産 */}
+              <Grid.Col span={6}>
+                <Box style={{ display: 'flex', flexDirection: 'column', height: 360 }}>
+                  <Text size="sm" c="dimmed">資産</Text>
+                  <Box style={{ flex: 1, overflowY: 'auto', paddingRight: 4, minHeight: 220 }}>
+                    {balanceSheetData.assets.map((item, index) => (
+                      <Group key={index} justify="space-between" mb="md">
+                        <Text size="sm">{item.name}</Text>
+                        <Text size="sm">{item.amount.toLocaleString()}円</Text>
+                      </Group>
+                    ))}
+                  </Box>
+                  <Group justify="space-between" pt="md" style={{ borderTop: '1px solid #eee', marginTop: 'auto' }}>
+                    <Text fw={500}>合計</Text>
+                    <Text fw={500}>
+                      {balanceSheetData.assets.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}円
+                    </Text>
+                  </Group>
+                </Box>
+              </Grid.Col>
+
+              {/* 負債・純資産（分割表示） */}
+              <Grid.Col span={6}>
+                <Box style={{ display: 'flex', flexDirection: 'column', height: 360 }}>
+                  <Text size="sm" c="dimmed">負債</Text>
+                  <Box style={{ flex: 1, overflowY: 'auto', paddingRight: 4, minHeight: 140 }}>
+                    {balanceSheetData.liabilities.map((item, index) => (
+                      <Group key={`liab-${index}`} justify="space-between" mb="md">
+                        <Text size="sm">{item.name}</Text>
+                        <Text size="sm">{item.amount.toLocaleString()}円</Text>
+                      </Group>
+                    ))}
+                  </Box>
+
+                  <Text size="sm" c="dimmed" mt="md">純資産</Text>
+                  <Box style={{ flex: 1, overflowY: 'auto', paddingRight: 4, minHeight: 140 }}>
+                    {balanceSheetData.equity.map((item, index) => (
+                      <Group key={`equity-${index}`} justify="space-between" mb="md">
+                        <Text size="sm">{item.name}</Text>
+                        <Text size="sm">{item.amount.toLocaleString()}円</Text>
+                      </Group>
+                    ))}
+                  </Box>
+
+                  <Group justify="space-between" pt="md" style={{ borderTop: '1px solid #eee', marginTop: 'auto' }}>
+                    <Text fw={500}>合計</Text>
+                    <Text fw={500}>{totalLiabilitiesAndEquity.toLocaleString()}円</Text>
+                  </Group>
+                </Box>
+              </Grid.Col>
+            </Grid>
+          </Paper>
+        </Grid.Col>
+      </Grid>
+
+      {/* 収支計算書 */}
+      <Grid gutter="xl">
+        <Grid.Col span={12}>
+          <Paper p="xl" radius="md" withBorder>
+            <Title order={4} mb="xl">収支計算書</Title>
+            <Stack gap="md">
+              {incomeData.map((item, index) => (
+                <Group key={index} justify="space-between">
+                  <Text size="sm">収益　{item.name}</Text>
+                  <Text size="sm" fw={500}>{item.value.toLocaleString()}円</Text>
+                </Group>
+              ))}
+              <Group justify="space-between" pt="md" style={{ borderTop: '1px solid #e9ecef' }}>
+                <Text size="sm" fw={600}>収益合計</Text>
+                <Text size="sm" fw={600}>{totalRevenue.toLocaleString()}円</Text>
+              </Group>
+
+              {expenseData.map((item, index) => (
+                <Group key={`expense-${index}`} justify="space-between">
+                  <Text size="sm">費用　{item.name}</Text>
+                  <Text size="sm" fw={500}>{item.value.toLocaleString()}円</Text>
+                </Group>
+              ))}
+              <Group justify="space-between" pt="md" style={{ borderTop: '1px solid #e9ecef' }}>
+                <Text size="sm" fw={600}>費用合計</Text>
+                <Text size="sm" fw={600}>{totalExpenses.toLocaleString()}円</Text>
+              </Group>
+
+              <Group justify="space-between" pt="md" style={{ borderTop: '2px solid #e9ecef' }}>
+                <Text size="md" fw={700}>収支合計</Text>
+                <Text size="md" fw={700} style={{ color: netIncome >= 0 ? '#16A34A' : '#DC2626' }}>
+                  {netIncome.toLocaleString()}円
+                </Text>
+              </Group>
+            </Stack>
+          </Paper>
+        </Grid.Col>
+      </Grid>
     </Stack>
   );
 };

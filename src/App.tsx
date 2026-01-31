@@ -6,6 +6,7 @@ import '@mantine/dates/styles.css';
 import '@mantine/charts/styles.css';
 import { AuthProvider } from './contexts/AuthContext';
 import { AdsProvider } from './contexts/AdsContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import MainLayout from './components/Layout/MainLayout';
 import Dashboard from './pages/Dashboard';
@@ -14,8 +15,10 @@ import JournalList from './pages/JournalList';
 import AccountSettings from './pages/AccountSettings';
 import MyPage from './pages/MyPage';
 import CalendarPage from './pages/Calendar';
+import Settings from './pages/Settings';
 import Login from './pages/Login';
 import { theme } from './theme/theme';
+import { createTheme } from '@mantine/core';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -77,6 +80,7 @@ function AppContent() {
                 <Route path="/account-settings" element={<AccountSettings />} />
                 <Route path="/mypage" element={<MyPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/settings" element={<Settings />} />
                 <Route path="/reports" element={<div>財務レポート（準備中）</div>} />
               </Routes>
             </MainLayout>
@@ -87,21 +91,36 @@ function AppContent() {
   );
 }
 
-function App() {
+function ThemedApp() {
+  const { primaryColor } = useTheme();
+  
+  const dynamicTheme = createTheme({
+    ...theme,
+    primaryColor: primaryColor,
+  });
+
   return (
     <MantineProvider 
-      theme={theme} 
+      theme={dynamicTheme} 
       defaultColorScheme="auto"
       colorSchemeManager={localStorageColorSchemeManager({ key: 'color-scheme' })}
     >
-      <Router>
-        <AuthProvider>
-          <AdsProvider>
-            <AppContent />
-          </AdsProvider>
-        </AuthProvider>
-      </Router>
+      <AppContent />
     </MantineProvider>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <ThemeProvider>
+          <AdsProvider>
+            <ThemedApp />
+          </AdsProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

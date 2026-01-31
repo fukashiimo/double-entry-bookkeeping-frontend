@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
@@ -17,16 +17,23 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <p>このアプリケーションを使用するには、JavaScriptを有効にしてください。</p>
+    </noscript>
     <script type="text/javascript">
-      // GitHub Pages用のSPAルーティング修正
+      // GitHub Pages用のSPAルーティング修正（カスタムドメイン対応）
       (function(l) {
-        if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) { 
-            return s.replace(/~and~/g, '&')
-          }).join('?');
-          window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
-          );
+        try {
+          if (l.search[1] === '/') {
+            var decoded = l.search.slice(1).split('&').map(function(s) { 
+              return s.replace(/~and~/g, '&')
+            }).join('?');
+            window.history.replaceState(null, null,
+                l.pathname.slice(0, -1) + decoded + l.hash
+            );
+          }
+        } catch (e) {
+          console.error('SPA routing error:', e);
         }
       }(window.location))
     </script>
