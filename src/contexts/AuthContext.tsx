@@ -53,32 +53,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signInWithGoogle = async () => {
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/`,
-          skipBrowserRedirect: true,
           queryParams: {
-            prompt: 'select_account', // 毎回アカウント選択画面を表示
+            prompt: 'select_account',
           },
         },
       })
       if (error) throw error
-      if (data?.url) {
-        window.location.href = data.url
-      } else {
-        // フォールバック: 自動リダイレクト方式
-        const retry = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}/`,
-            queryParams: {
-              prompt: 'select_account',
-            },
-          },
-        })
-        if (retry.error) throw retry.error
-      }
+      // Supabaseが自動的にリダイレクトを処理する
     } catch (error) {
       console.error('Error signing in with Google:', error)
       throw error
