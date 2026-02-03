@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { 
-  Table, 
-  Paper, 
-  Title, 
-  Group, 
-  Button, 
-  TextInput, 
+import {
+  Table,
+  Paper,
+  Title,
+  Group,
+  Button,
+  TextInput,
   Stack,
   Pagination,
   Menu,
@@ -17,11 +17,11 @@ import {
   Alert
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
-import { 
-  IconSearch, 
-  IconDotsVertical, 
-  IconEdit, 
-  IconTrash, 
+import {
+  IconSearch,
+  IconDotsVertical,
+  IconEdit,
+  IconTrash,
   IconDownload,
   IconPlus,
   IconFilter,
@@ -50,8 +50,9 @@ export default function JournalList({ onEdit }: JournalListProps) {
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
 
   // APIからデータを取得
-  const { journalEntries, loading: entriesLoading, error: entriesError } = useJournalEntries();
+  const { journalEntries, loading: entriesLoading, error: entriesError, deleteJournalEntry } = useJournalEntries();
   const { accounts, loading: accountsLoading, error: accountsError } = useAccounts();
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   const ITEMS_PER_PAGE = 10;
 
@@ -96,8 +97,41 @@ export default function JournalList({ onEdit }: JournalListProps) {
   const totalPages = Math.ceil((journalEntries || []).length / ITEMS_PER_PAGE);
 
   const handleExport = () => {
-    // CSVエクスポート機能を実装予定
-    console.log('Export to CSV');
+    // CSVエクスポート
+    const headers = ['日付', '借方勘定科目', '借方補助科目', '貸方勘定科目', '貸方補助科目', '金額', '摘要'];
+    const csvData = (journalEntries || []).map(item => [
+      item.date,
+      item.debit_account_name,
+      item.debit_subaccount_name || '',
+      item.credit_account_name,
+      item.credit_subaccount_name || '',
+      item.amount,
+      item.description
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `仕訳帳_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('この仕訳を削除しますか？')) return;
+
+    setDeleting(id);
+    try {
+      await deleteJournalEntry(id);
+    } catch (err) {
+      alert('削除に失敗しました');
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const handleEdit = (item: {
@@ -230,8 +264,13 @@ export default function JournalList({ onEdit }: JournalListProps) {
                       >
                         編集
                       </Menu.Item>
-                      <Menu.Item leftSection={<IconTrash size={16} />} color="red">
-                        削除
+                      <Menu.Item
+                        leftSection={<IconTrash size={16} />}
+                        color="red"
+                        onClick={() => handleDelete(item.id)}
+                        disabled={deleting === item.id}
+                      >
+                        {deleting === item.id ? '削除中...' : '削除'}
                       </Menu.Item>
                     </Menu.Dropdown>
                   </Menu>

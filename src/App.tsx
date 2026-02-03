@@ -16,6 +16,7 @@ import AccountSettings from './pages/AccountSettings';
 import MyPage from './pages/MyPage';
 import CalendarPage from './pages/Calendar';
 import Settings from './pages/Settings';
+import Reports from './pages/Reports';
 import Login from './pages/Login';
 import { theme } from './theme/theme';
 import { createTheme } from '@mantine/core';
@@ -81,7 +82,7 @@ function AppContent() {
                 <Route path="/mypage" element={<MyPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/reports" element={<div>財務レポート（準備中）</div>} />
+                <Route path="/reports" element={<Reports />} />
               </Routes>
             </MainLayout>
           </ProtectedRoute>

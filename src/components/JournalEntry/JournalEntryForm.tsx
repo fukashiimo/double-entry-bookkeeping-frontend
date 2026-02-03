@@ -25,7 +25,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { accounts, loading: accountsLoading } = useAccounts();
-  const { createJournalEntry } = useJournalEntries();
+  const { createJournalEntry, updateJournalEntry } = useJournalEntries();
   const { fetchSubaccounts } = useSubaccounts();
   const [debitSubOptions, setDebitSubOptions] = useState<{ value: string; label: string }[]>([]);
   const [creditSubOptions, setCreditSubOptions] = useState<{ value: string; label: string }[]>([]);
@@ -106,7 +106,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // Supabase APIに送信
       const entryData = {
@@ -119,11 +119,20 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
         amount: values.amount,
       };
 
-      await createJournalEntry(entryData);
-      
+      if (isEditMode && editData) {
+        // 編集モード: 更新APIを呼び出す
+        await updateJournalEntry({
+          id: editData.id,
+          ...entryData,
+        });
+      } else {
+        // 新規作成モード
+        await createJournalEntry(entryData);
+      }
+
       // フォームをリセット
       form.reset();
-      
+
       // 親コンポーネントのonSubmitがあれば実行
       if (onSubmit) {
         onSubmit(values);
