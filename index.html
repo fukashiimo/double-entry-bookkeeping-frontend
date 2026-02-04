@@ -24,20 +24,17 @@
     </noscript>
     <script type="text/javascript">
       // GitHub Pages用のSPAルーティング修正（カスタムドメイン対応）
-      (function(l) {
+      (function() {
         try {
-          if (l.search[1] === '/') {
-            var decoded = l.search.slice(1).split('&').map(function(s) { 
-              return s.replace(/~and~/g, '&')
-            }).join('?');
-            window.history.replaceState(null, null,
-                l.pathname.slice(0, -1) + decoded + l.hash
-            );
+          var redirect = sessionStorage.getItem('redirect');
+          if (redirect) {
+            sessionStorage.removeItem('redirect');
+            window.history.replaceState(null, null, redirect);
           }
         } catch (e) {
           console.error('SPA routing error:', e);
         }
-      }(window.location))
+      })();
     </script>
   </body>
 </html>
