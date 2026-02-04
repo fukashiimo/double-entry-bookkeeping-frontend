@@ -1,23 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
   <head>
     <meta charset="utf-8">
-    <title>Redirecting...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>複式簿記システム</title>
     <script type="text/javascript">
-      // GitHub Pages用のSPAルーティング修正
-      // 現在のパスを取得してindex.htmlにリダイレクト
-      // カスタムドメイン直下で動かす場合のSPAルーティング修正
-      var l = window.location;
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        '/?/' +
-        l.pathname.slice(1).split('/').join('/').replace(/&/g, '~and~') +
-        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
-      );
+      // SPAルーティング用のリダイレクト
+      // カスタムドメイン（dbbudget.app）用のシンプルなリダイレクト
+      var path = window.location.pathname;
+      var search = window.location.search;
+      var hash = window.location.hash;
+      
+      // index.htmlにリダイレクト（パスとクエリパラメータ、ハッシュを保持）
+      window.location.replace('/index.html' + path + search + hash);
     </script>
   </head>
   <body>
-    <p>Redirecting...</p>
+    <p>読み込み中...</p>
+    <noscript>
+      <p>JavaScriptを有効にしてください。</p>
+    </noscript>
   </body>
 </html>
