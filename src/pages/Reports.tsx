@@ -81,7 +81,7 @@ export default function Reports() {
   return (
     <Stack gap="md">
       <Group justify="space-between">
-        <Title order={2}>財務レポート</Title>
+        <Title order={2}>ダッシュボード</Title>
         <Group>
           <MonthPickerInput
             value={selectedDate}
