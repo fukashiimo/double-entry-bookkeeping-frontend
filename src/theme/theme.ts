@@ -3,7 +3,7 @@ import { createTheme, type MantineTheme } from '@mantine/core';
 export const theme = createTheme({
   primaryColor: 'orange',
   fontFamily: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif',
-  defaultRadius: 'xl',
+  defaultRadius: 'md',
   colors: {
     // メインカラー（パステルコーラル - チームみらい風）
     violet: [
@@ -96,6 +96,71 @@ export const theme = createTheme({
       '#5A544F',
       '#3C3732',
     ],
+    // パステルピンク
+    pastelPink: [
+      '#FFF5F7',
+      '#FFE4E9',
+      '#FFD1D9',
+      '#FFB6C1',
+      '#FF9AAB',
+      '#FF7E95',
+      '#FF627F',
+      '#E5566F',
+      '#CC4A5F',
+      '#B33E4F',
+    ],
+    // パステルブルー
+    pastelBlue: [
+      '#F5FBFC',
+      '#E5F5F7',
+      '#D1EEF2',
+      '#AED9E0',
+      '#8BC4CE',
+      '#68AFBC',
+      '#459AAA',
+      '#3A8291',
+      '#2F6A78',
+      '#24525F',
+    ],
+    // パステルグリーン
+    pastelGreen: [
+      '#F5FBF5',
+      '#E5F5E5',
+      '#D1EED1',
+      '#B4E4B4',
+      '#97DA97',
+      '#7AD07A',
+      '#5DC65D',
+      '#4EAE4E',
+      '#3F963F',
+      '#307E30',
+    ],
+    // パステルイエロー
+    pastelYellow: [
+      '#FFFEF5',
+      '#FFFCE5',
+      '#FFF9D1',
+      '#FFFACD',
+      '#FFF5A3',
+      '#FFF079',
+      '#FFEB4F',
+      '#E5D345',
+      '#CCBB3B',
+      '#B3A331',
+    ],
+    // パステルパープル
+    pastelPurple: [
+      '#FBFAFF',
+      '#F5F3FF',
+      '#EDEBFF',
+      '#E6E6FA',
+      '#D4D4F0',
+      '#C2C2E6',
+      '#B0B0DC',
+      '#9696C4',
+      '#7C7CAC',
+      '#626294',
+    ],
   },
   components: {
     AppShell: {
@@ -112,33 +177,21 @@ export const theme = createTheme({
     },
     Button: {
       defaultProps: {
-        color: 'orange',
         radius: 'lg',
       },
       styles: {
         root: {
-          border: '1px solid rgba(247, 147, 30, 0.3)',
           transition: 'all 0.2s ease',
-          '&:hover': {
-            backgroundColor: 'rgba(247, 147, 30, 0.05)',
-            borderColor: 'rgba(247, 147, 30, 0.4)',
-          },
         },
       },
     },
     ActionIcon: {
       defaultProps: {
-        color: 'orange',
         radius: 'lg',
       },
       styles: {
         root: {
-          border: '1px solid rgba(247, 147, 30, 0.2)',
           transition: 'all 0.2s ease',
-          '&:hover': {
-            backgroundColor: 'rgba(247, 147, 30, 0.05)',
-            borderColor: 'rgba(247, 147, 30, 0.3)',
-          },
         },
       },
     },
@@ -179,6 +232,36 @@ export const theme = createTheme({
           backgroundColor: 'var(--table-thead-bg)',
         },
       }),
+    },
+    TextInput: {
+      defaultProps: {
+        radius: 'sm',
+      },
+    },
+    Select: {
+      defaultProps: {
+        radius: 'sm',
+      },
+    },
+    NumberInput: {
+      defaultProps: {
+        radius: 'sm',
+      },
+    },
+    Textarea: {
+      defaultProps: {
+        radius: 'sm',
+      },
+    },
+    DateInput: {
+      defaultProps: {
+        radius: 'sm',
+      },
+    },
+    PasswordInput: {
+      defaultProps: {
+        radius: 'sm',
+      },
     },
   },
 });

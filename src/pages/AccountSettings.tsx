@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Stack,
   Title,
@@ -14,6 +14,7 @@ import {
   Alert,
   Loader,
   Center,
+  Text,
   useMantineTheme,
   useMantineColorScheme,
 } from '@mantine/core';
@@ -24,6 +25,8 @@ import {
   IconTrash,
   IconDots,
   IconAlertCircle,
+  IconCheck,
+  IconX,
 } from '@tabler/icons-react';
 import { useAccounts } from '../hooks/useAccounts';
 import { useSubaccounts } from '../hooks/useSubaccounts';
@@ -62,12 +65,85 @@ export default function AccountSettings() {
   const [subName, setSubName] = useState('');
   const [subEditingId, setSubEditingId] = useState<number | null>(null);
   const [subSubmitting, setSubSubmitting] = useState(false);
+
+  // インライン編集の状態
+  const [inlineEditingId, setInlineEditingId] = useState<number | null>(null);
+  const [inlineEditValue, setInlineEditValue] = useState('');
+  const [inlineEditType, setInlineEditType] = useState('');
+
+  // 補助科目のキャッシュ（勘定科目ID → 補助科目リスト）
+  const [subaccountsCache, setSubaccountsCache] = useState<Record<number, { id: number; name: string }[]>>({});
+  const [loadingSubaccounts, setLoadingSubaccounts] = useState<Record<number, boolean>>({});
+
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
   const surfaceBg = colorScheme === 'dark' ? theme.colors.dark[6] : '#f8f9fa';
   const surfaceBorder = colorScheme === 'dark' ? '1px solid rgba(255,255,255,0.15)' : '1px solid #e9ecef';
   const surfaceTextMuted = colorScheme === 'dark' ? theme.colors.gray[6] : '#6c757d';
+  const subaccountBg = colorScheme === 'dark' ? theme.colors.dark[7] : '#fff';
   
+  // 補助科目を読み込む
+  const loadSubaccounts = useCallback(async (accountId: number) => {
+    if (subaccountsCache[accountId] || loadingSubaccounts[accountId]) return;
+
+    setLoadingSubaccounts(prev => ({ ...prev, [accountId]: true }));
+    try {
+      const list = await fetchSubaccounts(accountId);
+      setSubaccountsCache(prev => ({ ...prev, [accountId]: list.map(s => ({ id: s.id, name: s.name })) }));
+    } catch (e) {
+      setSubaccountsCache(prev => ({ ...prev, [accountId]: [] }));
+    } finally {
+      setLoadingSubaccounts(prev => ({ ...prev, [accountId]: false }));
+    }
+  }, [fetchSubaccounts, subaccountsCache, loadingSubaccounts]);
+
+  // 初回ロード時に全ての補助科目を取得
+  useEffect(() => {
+    if (!accounts) return;
+    const allAccounts = [
+      ...accounts.assets,
+      ...accounts.liabilities,
+      ...accounts.equity,
+      ...accounts.revenue,
+      ...accounts.expenses,
+    ];
+    allAccounts.forEach(account => {
+      loadSubaccounts(account.id);
+    });
+  }, [accounts]);
+
+  // インライン編集を開始
+  const startInlineEdit = (account: { id: number; name: string; type: string }) => {
+    setInlineEditingId(account.id);
+    setInlineEditValue(account.name);
+    setInlineEditType(account.type);
+  };
+
+  // インライン編集を保存
+  const saveInlineEdit = async () => {
+    if (!inlineEditingId || !inlineEditValue.trim()) {
+      setInlineEditingId(null);
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await updateAccount(inlineEditingId, inlineEditValue, inlineEditType as any);
+      setInlineEditingId(null);
+      setInlineEditValue('');
+    } catch (err) {
+      console.error('Error updating account:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // インライン編集をキャンセル
+  const cancelInlineEdit = () => {
+    setInlineEditingId(null);
+    setInlineEditValue('');
+  };
+
   const handleAddAccount = async () => {
     if (!selectedType || !accountName.trim()) return;
 
@@ -163,8 +239,8 @@ export default function AccountSettings() {
             <Title order={4} mb="sm">{ACCOUNT_TYPE_LABELS[type as keyof typeof ACCOUNT_TYPE_LABELS] || type}</Title>
             <Stack gap="xs">
               {accountList.length === 0 ? (
-                <Box p="md" style={{ 
-                  backgroundColor: surfaceBg, 
+                <Box p="md" style={{
+                  backgroundColor: surfaceBg,
                   borderRadius: '6px',
                   border: surfaceBorder,
                   textAlign: 'center',
@@ -174,48 +250,136 @@ export default function AccountSettings() {
                 </Box>
               ) : (
                 accountList.map((account: any) => (
-                  <Group key={account.id} justify="space-between" p="xs" style={{ 
-                    backgroundColor: surfaceBg, 
-                    borderRadius: '6px',
-                    border: surfaceBorder
-                  }}>
-                    <span style={{ fontWeight: 500 }}>{account.name}</span>
-                    <Menu position="bottom-start">
-                      <Menu.Target>
-                        <ActionIcon size="sm" variant="subtle">
-                          <IconDots size={16} />
-                        </ActionIcon>
-                      </Menu.Target>
-                      <Menu.Dropdown>
-                        <Menu.Item
-                          leftSection={<IconEdit size={16} />}
-                          onClick={() => handleEditAccount(account)}
-                        >
-                          編集
-                        </Menu.Item>
-                        <Menu.Item
-                          leftSection={<IconPlus size={16} />}
-                          onClick={async () => {
-                            setSubTargetAccount({ id: account.id, name: account.name });
-                            setSubModalOpen(true);
-                            setSubEditingId(null);
-                            setSubName('');
-                            try {
-                              const list = await fetchSubaccounts(account.id);
-                              setSubList(list.map(s => ({ id: s.id, name: s.name })));
-                            } catch (e) {
-                              setSubList([]);
-                            }
+                  <Box key={account.id}>
+                    {/* 勘定科目 */}
+                    <Group justify="space-between" p="xs" style={{
+                      backgroundColor: surfaceBg,
+                      borderRadius: '6px',
+                      border: surfaceBorder
+                    }}>
+                      {inlineEditingId === account.id ? (
+                        // インライン編集モード
+                        <Group gap="xs" style={{ flex: 1 }}>
+                          <TextInput
+                            value={inlineEditValue}
+                            onChange={(e) => setInlineEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveInlineEdit();
+                              if (e.key === 'Escape') cancelInlineEdit();
+                            }}
+                            autoFocus
+                            size="sm"
+                            style={{ flex: 1 }}
+                            disabled={isSubmitting}
+                          />
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            color="green"
+                            onClick={saveInlineEdit}
+                            loading={isSubmitting}
+                          >
+                            <IconCheck size={16} />
+                          </ActionIcon>
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            color="gray"
+                            onClick={cancelInlineEdit}
+                            disabled={isSubmitting}
+                          >
+                            <IconX size={16} />
+                          </ActionIcon>
+                        </Group>
+                      ) : (
+                        // 表示モード（クリックで編集開始）
+                        <span
+                          style={{
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            transition: 'background-color 0.15s',
                           }}
+                          onClick={() => startInlineEdit(account)}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = colorScheme === 'dark'
+                              ? 'rgba(255,255,255,0.1)'
+                              : 'rgba(0,0,0,0.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                          title="クリックして編集"
                         >
-                          補助科目を管理
-                        </Menu.Item>
-                        <Menu.Item leftSection={<IconTrash size={16} />} color="red" onClick={() => handleDeleteAccount(account.id)}>
-                          削除
-                        </Menu.Item>
-                      </Menu.Dropdown>
-                    </Menu>
-                  </Group>
+                          {account.name}
+                        </span>
+                      )}
+                      <Menu position="bottom-start">
+                        <Menu.Target>
+                          <ActionIcon size="sm" variant="subtle">
+                            <IconDots size={16} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          <Menu.Item
+                            leftSection={<IconEdit size={16} />}
+                            onClick={() => handleEditAccount(account)}
+                          >
+                            編集（モーダル）
+                          </Menu.Item>
+                          <Menu.Item
+                            leftSection={<IconPlus size={16} />}
+                            onClick={async () => {
+                              setSubTargetAccount({ id: account.id, name: account.name });
+                              setSubModalOpen(true);
+                              setSubEditingId(null);
+                              setSubName('');
+                              try {
+                                const list = await fetchSubaccounts(account.id);
+                                setSubList(list.map(s => ({ id: s.id, name: s.name })));
+                              } catch (e) {
+                                setSubList([]);
+                              }
+                            }}
+                          >
+                            補助科目を管理
+                          </Menu.Item>
+                          <Menu.Item leftSection={<IconTrash size={16} />} color="red" onClick={() => handleDeleteAccount(account.id)}>
+                            削除
+                          </Menu.Item>
+                        </Menu.Dropdown>
+                      </Menu>
+                    </Group>
+
+                    {/* 補助科目をインデント表示 */}
+                    {subaccountsCache[account.id] && subaccountsCache[account.id].length > 0 && (
+                      <Stack gap={4} ml="xl" mt={4}>
+                        {subaccountsCache[account.id].map((sub) => (
+                          <Group
+                            key={sub.id}
+                            justify="space-between"
+                            p="xs"
+                            style={{
+                              backgroundColor: subaccountBg,
+                              borderRadius: '4px',
+                              border: surfaceBorder,
+                              marginLeft: '8px',
+                            }}
+                          >
+                            <Text size="sm" c="dimmed" style={{ paddingLeft: '8px' }}>
+                              └ {sub.name}
+                            </Text>
+                          </Group>
+                        ))}
+                      </Stack>
+                    )}
+                    {loadingSubaccounts[account.id] && (
+                      <Box ml="xl" mt={4} pl="md">
+                        <Loader size="xs" />
+                      </Box>
+                    )}
+                  </Box>
                 ))
               )}
             </Stack>
@@ -232,15 +396,6 @@ export default function AccountSettings() {
         centered
         zIndex={2000}
         overlayProps={{ opacity: 0.55, blur: 3 }}
-        styles={{
-          content: {
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 2000,
-          }
-        }}
       >
         <Stack p="md" gap="md">
           <Select
@@ -307,10 +462,22 @@ export default function AccountSettings() {
                   if (subEditingId) {
                     const updated = await updateSubaccount(subEditingId, { name: subName });
                     setSubList(prev => prev.map(s => s.id === updated.id ? { id: updated.id, name: updated.name } : s));
+                    // キャッシュも更新
+                    setSubaccountsCache(prev => ({
+                      ...prev,
+                      [subTargetAccount.id]: prev[subTargetAccount.id]?.map(s =>
+                        s.id === updated.id ? { id: updated.id, name: updated.name } : s
+                      ) || []
+                    }));
                     setSubEditingId(null);
                   } else {
                     const created = await createSubaccount(subTargetAccount.id, subName);
                     setSubList(prev => [...prev, { id: created.id, name: created.name }]);
+                    // キャッシュも更新
+                    setSubaccountsCache(prev => ({
+                      ...prev,
+                      [subTargetAccount.id]: [...(prev[subTargetAccount.id] || []), { id: created.id, name: created.name }]
+                    }));
                   }
                   setSubName('');
                 } finally {
@@ -333,6 +500,13 @@ export default function AccountSettings() {
                     if (!confirm('この補助科目を削除しますか？')) return;
                     await deleteSubaccount(item.id);
                     setSubList(prev => prev.filter(s => s.id !== item.id));
+                    // キャッシュも更新
+                    if (subTargetAccount) {
+                      setSubaccountsCache(prev => ({
+                        ...prev,
+                        [subTargetAccount.id]: prev[subTargetAccount.id]?.filter(s => s.id !== item.id) || []
+                      }));
+                    }
                   }}>
                     <IconTrash size={16} />
                   </ActionIcon>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { MantineProvider, localStorageColorSchemeManager } from '@mantine/core';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
@@ -9,7 +9,6 @@ import { AdsProvider } from './contexts/AdsContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import MainLayout from './components/Layout/MainLayout';
-import Dashboard from './pages/Dashboard';
 import { JournalEntryForm } from './components/JournalEntry/JournalEntryForm';
 import JournalList from './pages/JournalList';
 import AccountSettings from './pages/AccountSettings';
@@ -63,7 +62,7 @@ function AppContent() {
           <ProtectedRoute>
             <MainLayout>
               <Routes>
-                <Route path="/" element={<Dashboard />} />
+                <Route path="/" element={<Navigate to="/reports" replace />} />
                 <Route 
                   path="/journal-entry" 
                   element={

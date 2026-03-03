@@ -2,9 +2,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AppShell, Burger, Group, Title, UnstyledButton, Text, Box, Stack, ActionIcon, Affix, Menu, Avatar } from '@mantine/core';
 import { useMantineColorScheme, useMantineTheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { 
-  IconDashboard, 
-  IconBook, 
+import {
+  IconBook,
   IconSettings,
   IconChartPie,
   IconPlus,
@@ -18,12 +17,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import AdBanner from '../Ads/AdBanner';
 
 const mainLinks = [
-  { icon: IconDashboard, label: 'ダッシュボード', path: '/' },
+  { icon: IconChartPie, label: 'ダッシュボード', path: '/reports' },
   { icon: IconBook, label: '仕訳帳', path: '/journal-list' },
   { icon: IconPlus, label: '仕訳入力', path: '/journal-entry' },
   { icon: IconCalendarStats, label: 'カレンダー', path: '/calendar' },
   { icon: IconList, label: '勘定科目設定', path: '/account-settings' },
-  { icon: IconChartPie, label: '財務レポート', path: '/reports' },
   { icon: IconSettings, label: '設定', path: '/settings' },
   { icon: IconUser, label: 'マイページ', path: '/mypage' },
 ];
@@ -43,9 +41,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   const toggleColorScheme = () => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark');
 
+  // プライマリカラーの取得
+  const primaryColor = theme.primaryColor || 'orange';
+  const primaryShade = theme.colors[primaryColor];
+
   const mainItems = mainLinks.map((link) => {
     const isActive = location.pathname === link.path;
-    
+
     return (
       <UnstyledButton
         key={link.label}
@@ -61,14 +63,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
           width: '100%',
           borderRadius: theme.radius.md,
           color: isActive
-            ? isDark ? theme.colors.orange[2] : '#7566FF'
+            ? isDark ? primaryShade[2] : primaryShade[6]
             : isDark ? theme.colors.gray[1] : '#7A736C',
           backgroundColor: isActive
-            ? isDark ? 'rgba(255, 179, 30, 0.18)' : '#E8E5FF'
+            ? isDark ? `${primaryShade[6]}30` : `${primaryShade[1]}`
             : isDark ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
           '&:hover': {
             backgroundColor: isActive
-              ? isDark ? 'rgba(255, 179, 30, 0.26)' : '#D1CCFF'
+              ? isDark ? `${primaryShade[6]}40` : `${primaryShade[2]}`
               : isDark ? 'rgba(255, 255, 255, 0.05)' : '#F7F5F3',
           },
           transition: 'all 0.2s ease',
@@ -100,8 +102,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
           h="100%"
           px="xl"
           justify="space-between"
-          style={(theme) => ({
-            backgroundColor: colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.blue[6],
+          style={() => ({
+            backgroundColor: colorScheme === 'dark' ? theme.colors.dark[6] : primaryShade[6],
           })}
         >
           <Group>
@@ -139,13 +141,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar 
-        p="md" 
-        style={(theme) => ({
-          backgroundColor: colorScheme === 'dark' ? theme.colors.dark[7] : '#F8F7FF',
+      <AppShell.Navbar
+        p="md"
+        style={() => ({
+          backgroundColor: colorScheme === 'dark' ? theme.colors.dark[7] : primaryShade[0],
           borderRight: colorScheme === 'dark'
             ? '1px solid rgba(255, 255, 255, 0.1)'
-            : '1px solid rgba(71, 51, 255, 0.2)',
+            : `1px solid ${primaryShade[2]}`,
           zIndex: 1000,
         })}
       >
@@ -190,10 +192,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
             size="xl"
             radius="xl"
             variant="filled"
-            color="orange"
+            color={primaryColor}
             onClick={() => navigate('/journal-entry')}
             style={{
-              backgroundColor: '#FFB31E',
+              backgroundColor: primaryShade[5],
               zIndex: 1000,
             }}
             hiddenFrom="sm"

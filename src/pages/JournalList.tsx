@@ -153,8 +153,7 @@ export default function JournalList({ onEdit }: JournalListProps) {
         <Button 
           leftSection={<IconPlus size={16} />}
           onClick={() => navigate('/journal-entry')}
-          color="orange"
-        >
+                  >
           新規仕訳
         </Button>
       </Group>
@@ -195,8 +194,7 @@ export default function JournalList({ onEdit }: JournalListProps) {
                     variant="outline" 
                     leftSection={<IconFilter size={16} />}
                     fullWidth
-                    color="orange"
-                  >
+                                      >
                     絞り込み
                   </Button>
           </Grid.Col>
@@ -209,71 +207,64 @@ export default function JournalList({ onEdit }: JournalListProps) {
           <Table.Thead>
             <Table.Tr>
               <Table.Th style={{ width: '100px' }}>日付</Table.Th>
-              <Table.Th style={{ width: '280px' }}>借方勘定科目</Table.Th>
-              <Table.Th style={{ width: '280px' }}>貸方勘定科目</Table.Th>
-              <Table.Th style={{ textAlign: 'right', width: '120px' }}>金額</Table.Th>
+              <Table.Th style={{ width: '180px' }}>借方勘定科目</Table.Th>
+              <Table.Th style={{ textAlign: 'right', width: '100px' }}>金額</Table.Th>
+              <Table.Th style={{ width: '180px' }}>貸方勘定科目</Table.Th>
+              <Table.Th style={{ textAlign: 'right', width: '100px' }}>金額</Table.Th>
               <Table.Th>内容</Table.Th>
-              <Table.Th style={{ width: '80px' }}></Table.Th>
+              <Table.Th style={{ width: '100px' }}></Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {filteredData.map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{new Date(item.date).toLocaleDateString('ja-JP')}</Table.Td>
-                <Table.Td style={{ 
-                  fontWeight: 500, 
-                  color: 'var(--debit-text)', 
-                  backgroundColor: 'var(--debit-bg)',
-                  borderRadius: '6px',
-                  padding: '8px 12px',
-                  border: '1px solid var(--debit-border)'
-                }}>
+                <Table.Td style={{ fontWeight: 500 }}>
                   {item.debit_account_name}
                   {item.debit_subaccount_name ? (
-                    <span style={{ color: 'var(--debit-subtext)', marginLeft: 6, fontSize: '0.9em' }}>（{item.debit_subaccount_name}）</span>
-                  ) : null}
-                </Table.Td>
-                <Table.Td style={{ 
-                  fontWeight: 500, 
-                  color: 'var(--credit-text)', 
-                  backgroundColor: 'var(--credit-bg)',
-                  borderRadius: '6px',
-                  padding: '8px 12px',
-                  border: '1px solid var(--credit-border)'
-                }}>
-                  {item.credit_account_name}
-                  {item.credit_subaccount_name ? (
-                    <span style={{ color: 'var(--credit-subtext)', marginLeft: 6, fontSize: '0.9em' }}>（{item.credit_subaccount_name}）</span>
+                    <span style={{ color: 'var(--mantine-color-dimmed)', marginLeft: 6, fontSize: '0.9em' }}>（{item.debit_subaccount_name}）</span>
                   ) : null}
                 </Table.Td>
                 <Table.Td style={{ textAlign: 'right', fontWeight: 600, fontSize: '14px' }}>
-                  ¥{item.amount.toLocaleString()}
+                  {item.amount.toLocaleString()}
+                </Table.Td>
+                <Table.Td style={{ fontWeight: 500 }}>
+                  {item.credit_account_name}
+                  {item.credit_subaccount_name ? (
+                    <span style={{ color: 'var(--mantine-color-dimmed)', marginLeft: 6, fontSize: '0.9em' }}>（{item.credit_subaccount_name}）</span>
+                  ) : null}
+                </Table.Td>
+                <Table.Td style={{ textAlign: 'right', fontWeight: 600, fontSize: '14px' }}>
+                  {item.amount.toLocaleString()}
                 </Table.Td>
                 <Table.Td>{item.description}</Table.Td>
                 <Table.Td>
-                  <Menu shadow="md" width={200}>
-                    <Menu.Target>
-                      <ActionIcon variant="subtle" color="gray">
-                        <IconDotsVertical size={16} />
-                      </ActionIcon>
-                    </Menu.Target>
-                    <Menu.Dropdown>
-                      <Menu.Item 
-                        leftSection={<IconEdit size={16} />}
-                        onClick={() => handleEdit(item)}
-                      >
-                        編集
-                      </Menu.Item>
-                      <Menu.Item
-                        leftSection={<IconTrash size={16} />}
-                        color="red"
-                        onClick={() => handleDelete(item.id)}
-                        disabled={deleting === item.id}
-                      >
-                        {deleting === item.id ? '削除中...' : '削除'}
-                      </Menu.Item>
-                    </Menu.Dropdown>
-                  </Menu>
+                  <Group gap="xs">
+                    <ActionIcon
+                      variant="subtle"
+                      color="blue"
+                      onClick={() => handleEdit(item)}
+                    >
+                      <IconEdit size={16} />
+                    </ActionIcon>
+                    <Menu shadow="md" width={200}>
+                      <Menu.Target>
+                        <ActionIcon variant="subtle" color="gray">
+                          <IconDotsVertical size={16} />
+                        </ActionIcon>
+                      </Menu.Target>
+                      <Menu.Dropdown>
+                        <Menu.Item
+                          leftSection={<IconTrash size={16} />}
+                          color="red"
+                          onClick={() => handleDelete(item.id)}
+                          disabled={deleting === item.id}
+                        >
+                          {deleting === item.id ? '削除中...' : '削除'}
+                        </Menu.Item>
+                      </Menu.Dropdown>
+                    </Menu>
+                  </Group>
                 </Table.Td>
               </Table.Tr>
             ))}
@@ -290,8 +281,7 @@ export default function JournalList({ onEdit }: JournalListProps) {
                     variant="light" 
                     leftSection={<IconDownload size={16} />}
                     onClick={handleExport}
-                    color="orange"
-                  >
+                                      >
                     CSVエクスポート
                   </Button>
             <Pagination 

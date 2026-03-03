@@ -25,17 +25,20 @@ interface MonthlyCalendarProps {
   year: number
   month: number
   dailyTotals: DailyTotal[]
+  onDateClick?: (date: string) => void
 }
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 const formatCurrency = (value: number) => {
   if (!value) return '¥0'
-  const sign = value > 0 ? '+' : '-'
-  return `${sign}¥${Math.abs(Math.round(value)).toLocaleString()}`
+  if (value < 0) {
+    return `¥-${Math.abs(Math.round(value)).toLocaleString()}`
+  }
+  return `¥${Math.round(value).toLocaleString()}`
 }
 
-export const MonthlyCalendar = ({ year, month, dailyTotals }: MonthlyCalendarProps) => {
+export const MonthlyCalendar = ({ year, month, dailyTotals, onDateClick }: MonthlyCalendarProps) => {
   const theme = useMantineTheme()
   const { colorScheme } = useMantineColorScheme()
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`)
@@ -114,12 +117,16 @@ export const MonthlyCalendar = ({ year, month, dailyTotals }: MonthlyCalendarPro
           const hasTransactions = Math.abs(totals.income) > 0 || Math.abs(totals.expenses) > 0
           
           // ダークモード対応の背景色
+          // プライマリカラーを使用
+          const primaryColor = theme.primaryColor || 'orange'
+          const primaryShade = theme.colors[primaryColor]
+
           const background = colorScheme === 'dark'
             ? hasTransactions
               ? theme.colors.dark[6]
               : theme.colors.dark[7]
             : hasTransactions
-              ? theme.colors.orange?.[0] ?? theme.colors.gray[0]
+              ? primaryShade?.[0] ?? theme.colors.gray[0]
               : theme.white
           
           // ダークモード対応のボーダー色
@@ -130,6 +137,7 @@ export const MonthlyCalendar = ({ year, month, dailyTotals }: MonthlyCalendarPro
           return (
             <Box
               key={key}
+              onClick={() => onDateClick?.(key)}
               style={{
                 borderRadius: theme.radius.md,
                 border: `1px solid ${borderColor}`,
@@ -140,6 +148,18 @@ export const MonthlyCalendar = ({ year, month, dailyTotals }: MonthlyCalendarPro
                 flexDirection: 'column',
                 gap: theme.spacing.xs,
                 overflow: 'hidden',
+                cursor: onDateClick ? 'pointer' : 'default',
+                transition: 'transform 0.1s ease, box-shadow 0.1s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (onDateClick) {
+                  e.currentTarget.style.transform = 'scale(1.02)'
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)'
+                e.currentTarget.style.boxShadow = 'none'
               }}
             >
               <Text fw={600} size={isMobile ? 'sm' : 'md'}>

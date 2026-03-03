@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Alert, ActionIcon, Box, Group, Loader, Paper, Stack, Text, Title } from '@mantine/core';
+import { Alert, ActionIcon, Box, Group, Loader, Modal, Paper, Stack, Table, Text, Title } from '@mantine/core';
 import { IconAlertCircle, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { useRealtime } from '../hooks/useRealtime';
+import { useJournalEntries } from '../hooks/useJournalEntries';
 import { MonthlyCalendar } from '../components/MonthlyCalendar';
 
 const CalendarPage = () => {
@@ -10,18 +11,33 @@ const CalendarPage = () => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [modalOpened, setModalOpened] = useState(false);
 
   const selectedYear = selectedMonth.getFullYear();
   const selectedMonthNumber = selectedMonth.getMonth() + 1;
 
-  const { data: dashboardData, loading, error } = useDashboard(selectedYear, selectedMonthNumber);
+  const { data: dashboardData, loading, error, refetch } = useDashboard(selectedYear, selectedMonthNumber);
+  const { journalEntries } = useJournalEntries();
 
   // リアルタイム機能を有効化（仕訳が追加されたら自動反映）
-  useRealtime();
+  useRealtime({
+    onJournalChange: refetch,
+    onAccountChange: refetch,
+  });
 
   const handleMonthChange = (direction: number) => {
     setSelectedMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + direction, 1));
   };
+
+  const handleDateClick = (date: string) => {
+    setSelectedDate(date);
+    setModalOpened(true);
+  };
+
+  const selectedDateEntries = (journalEntries || []).filter(
+    (entry) => entry.date === selectedDate
+  );
 
   if (loading) {
     return (
@@ -77,8 +93,7 @@ const CalendarPage = () => {
           <Group gap="xs" align="center">
             <ActionIcon
               variant="light"
-              color="orange"
-              aria-label="前の月へ"
+                            aria-label="前の月へ"
               onClick={() => handleMonthChange(-1)}
             >
               <IconChevronLeft size={18} />
@@ -86,8 +101,7 @@ const CalendarPage = () => {
             <Text fw={600}>{currentMonthString}</Text>
             <ActionIcon
               variant="light"
-              color="orange"
-              aria-label="次の月へ"
+                            aria-label="次の月へ"
               onClick={() => handleMonthChange(1)}
             >
               <IconChevronRight size={18} />
@@ -99,8 +113,49 @@ const CalendarPage = () => {
           </Text>
         </Group>
 
-        <MonthlyCalendar year={year} month={month} dailyTotals={dailyTotals} />
+        <MonthlyCalendar
+          year={year}
+          month={month}
+          dailyTotals={dailyTotals}
+          onDateClick={handleDateClick}
+        />
       </Paper>
+
+      <Modal
+        opened={modalOpened}
+        onClose={() => setModalOpened(false)}
+        title={selectedDate ? `${selectedDate} の仕訳一覧` : '仕訳一覧'}
+        size="lg"
+      >
+        {selectedDateEntries.length > 0 ? (
+          <Table>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>借方</Table.Th>
+                <Table.Th>貸方</Table.Th>
+                <Table.Th style={{ textAlign: 'right' }}>金額</Table.Th>
+                <Table.Th>摘要</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {selectedDateEntries.map((entry) => (
+                <Table.Tr key={entry.id}>
+                  <Table.Td>{entry.debit_account_name}</Table.Td>
+                  <Table.Td>{entry.credit_account_name}</Table.Td>
+                  <Table.Td style={{ textAlign: 'right' }}>
+                    {entry.amount.toLocaleString()}
+                  </Table.Td>
+                  <Table.Td>{entry.description}</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        ) : (
+          <Text c="dimmed" ta="center" py="xl">
+            この日の仕訳はありません
+          </Text>
+        )}
+      </Modal>
     </Stack>
   );
 };

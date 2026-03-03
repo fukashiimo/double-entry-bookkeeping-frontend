@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
 
-export type PrimaryColor = 'orange' | 'blue' | 'green' | 'violet' | 'indigo' | 'red'
+export type PrimaryColor = 'orange' | 'blue' | 'green' | 'violet' | 'indigo' | 'red' | 'pastelPink' | 'pastelBlue' | 'pastelGreen' | 'pastelYellow' | 'pastelPurple'
 
 interface ThemeContextType {
   primaryColor: PrimaryColor
@@ -30,7 +30,8 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw !== null && ['orange', 'blue', 'green', 'violet', 'indigo', 'red'].includes(raw)) {
+      const validColors = ['orange', 'blue', 'green', 'violet', 'indigo', 'red', 'pastelPink', 'pastelBlue', 'pastelGreen', 'pastelYellow', 'pastelPurple']
+      if (raw !== null && validColors.includes(raw)) {
         setPrimaryColorState(raw as PrimaryColor)
       }
     } catch {

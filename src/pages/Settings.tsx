@@ -8,6 +8,11 @@ const colorOptions: Array<{ value: PrimaryColor; label: string; color: string }>
   { value: 'violet', label: 'バイオレット', color: '#7566FF' },
   { value: 'indigo', label: 'インディゴ', color: '#4733FF' },
   { value: 'red', label: 'レッド', color: '#E53E3E' },
+  { value: 'pastelPink', label: 'パステルピンク', color: '#FFB6C1' },
+  { value: 'pastelBlue', label: 'パステルブルー', color: '#AED9E0' },
+  { value: 'pastelGreen', label: 'パステルグリーン', color: '#B4E4B4' },
+  { value: 'pastelYellow', label: 'パステルイエロー', color: '#FFFACD' },
+  { value: 'pastelPurple', label: 'パステルパープル', color: '#E6E6FA' },
 ];
 
 const Settings = () => {

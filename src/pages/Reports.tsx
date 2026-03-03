@@ -57,22 +57,22 @@ export default function Reports() {
   const totalAssets = data?.balanceSheet?.assets?.reduce((sum, item) => sum + item.amount, 0) || 0;
   const totalLiabilities = data?.balanceSheet?.liabilities?.reduce((sum, item) => sum + item.amount, 0) || 0;
   const totalEquity = data?.balanceSheet?.equity?.reduce((sum, item) => sum + item.amount, 0) || 0;
-  const totalRevenue = data?.incomeStatement?.revenue?.reduce((sum, item) => sum + item.value, 0) || 0;
-  const totalExpenses = data?.incomeStatement?.expenses?.reduce((sum, item) => sum + item.value, 0) || 0;
-  const netIncome = totalRevenue - totalExpenses;
+  const totalRevenue = data?.summary?.totalRevenue || 0;
+  const totalExpenses = data?.summary?.totalExpenses || 0;
+  const netIncome = data?.summary?.netIncome || 0;
 
   // 円グラフ用データ
-  const expenseChartData = (data?.incomeStatement?.expenses || [])
-    .filter(item => item.value > 0)
-    .map((item, index) => ({
+  const expenseChartData = (data?.expenseData || [])
+    .filter((item: { name: string; value: number }) => item.value > 0)
+    .map((item: { name: string; value: number }, index: number) => ({
       name: item.name,
       value: item.value,
       color: ['red.6', 'orange.6', 'yellow.6', 'teal.6', 'blue.6', 'violet.6', 'pink.6'][index % 7]
     }));
 
-  const revenueChartData = (data?.incomeStatement?.revenue || [])
-    .filter(item => item.value > 0)
-    .map((item, index) => ({
+  const revenueChartData = (data?.incomeData || [])
+    .filter((item: { name: string; value: number }) => item.value > 0)
+    .map((item: { name: string; value: number }, index: number) => ({
       name: item.name,
       value: item.value,
       color: ['green.6', 'teal.6', 'cyan.6', 'blue.6', 'indigo.6'][index % 5]
@@ -176,6 +176,7 @@ export default function Reports() {
                     withTooltip
                     tooltipDataSource="segment"
                     h={250}
+                    startAngle={90}
                   />
                 ) : (
                   <Text c="dimmed" ta="center" py="xl">収入データがありません</Text>
@@ -194,7 +195,60 @@ export default function Reports() {
                     withTooltip
                     tooltipDataSource="segment"
                     h={250}
+                    startAngle={90}
                   />
+                ) : (
+                  <Text c="dimmed" ta="center" py="xl">支出データがありません</Text>
+                )}
+              </Paper>
+            </Grid.Col>
+          </Grid>
+
+          {/* トップ5 */}
+          <Grid>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Paper p="md" radius="md" withBorder>
+                <Title order={4} mb="md">収入トップ5</Title>
+                {revenueChartData.length > 0 ? (
+                  <Stack gap="sm">
+                    {[...revenueChartData]
+                      .sort((a, b) => b.value - a.value)
+                      .slice(0, 5)
+                      .map((item, index) => (
+                        <Group key={index} justify="space-between">
+                          <Group gap="xs">
+                            <Badge color={item.color} size="sm">{index + 1}</Badge>
+                            <Text size="sm">{item.name}</Text>
+                          </Group>
+                          <Text size="sm" fw={500}>¥{item.value.toLocaleString()}</Text>
+                        </Group>
+                      ))
+                    }
+                  </Stack>
+                ) : (
+                  <Text c="dimmed" ta="center" py="xl">収入データがありません</Text>
+                )}
+              </Paper>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Paper p="md" radius="md" withBorder>
+                <Title order={4} mb="md">支出トップ5</Title>
+                {expenseChartData.length > 0 ? (
+                  <Stack gap="sm">
+                    {[...expenseChartData]
+                      .sort((a, b) => b.value - a.value)
+                      .slice(0, 5)
+                      .map((item, index) => (
+                        <Group key={index} justify="space-between">
+                          <Group gap="xs">
+                            <Badge color={item.color} size="sm">{index + 1}</Badge>
+                            <Text size="sm">{item.name}</Text>
+                          </Group>
+                          <Text size="sm" fw={500}>¥{item.value.toLocaleString()}</Text>
+                        </Group>
+                      ))
+                    }
+                  </Stack>
                 ) : (
                   <Text c="dimmed" ta="center" py="xl">支出データがありません</Text>
                 )}
@@ -306,12 +360,6 @@ export default function Reports() {
                 <Text fw={700}>負債・純資産合計</Text>
                 <Text fw={700}>¥{(totalLiabilities + totalEquity).toLocaleString()}</Text>
               </Group>
-
-              {totalAssets === totalLiabilities + totalEquity ? (
-                <Badge color="green" mt="sm">バランスシート一致</Badge>
-              ) : (
-                <Badge color="red" mt="sm">バランスシート不一致</Badge>
-              )}
             </Paper>
           </Grid.Col>
         </Grid>
@@ -320,8 +368,9 @@ export default function Reports() {
       {reportType === 'income' && (
         <Paper p="md" radius="md" withBorder>
           <Title order={4} mb="md">損益計算書</Title>
-          <Grid>
-            <Grid.Col span={{ base: 12, md: 6 }}>
+          <Stack gap="md">
+            {/* 収益セクション */}
+            <div>
               <Title order={5} mb="sm" c="green">
                 <Group gap="xs">
                   <IconTrendingUp size={18} />
@@ -336,7 +385,7 @@ export default function Reports() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {(data?.incomeStatement?.revenue || []).map((item, index) => (
+                  {(data?.incomeData || []).map((item: { name: string; value: number }, index: number) => (
                     <Table.Tr key={index}>
                       <Table.Td>{item.name}</Table.Td>
                       <Table.Td style={{ textAlign: 'right' }}>¥{item.value.toLocaleString()}</Table.Td>
@@ -350,8 +399,12 @@ export default function Reports() {
                   </Table.Tr>
                 </Table.Tfoot>
               </Table>
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 6 }}>
+            </div>
+
+            <Divider />
+
+            {/* 費用セクション */}
+            <div>
               <Title order={5} mb="sm" c="red">
                 <Group gap="xs">
                   <IconTrendingDown size={18} />
@@ -366,7 +419,7 @@ export default function Reports() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {(data?.incomeStatement?.expenses || []).map((item, index) => (
+                  {(data?.expenseData || []).map((item: { name: string; value: number }, index: number) => (
                     <Table.Tr key={index}>
                       <Table.Td>{item.name}</Table.Td>
                       <Table.Td style={{ textAlign: 'right' }}>¥{item.value.toLocaleString()}</Table.Td>
@@ -380,13 +433,12 @@ export default function Reports() {
                   </Table.Tr>
                 </Table.Tfoot>
               </Table>
-            </Grid.Col>
-          </Grid>
+            </div>
 
-          <Divider my="md" />
+            <Divider />
 
-          <Group justify="center">
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ minWidth: 300 }}>
+            {/* 当期純利益 */}
+            <Card shadow="sm" padding="lg" radius="md" withBorder>
               <Text size="sm" c="dimmed" ta="center">当期純利益</Text>
               <Text size="xl" fw={700} ta="center" c={netIncome >= 0 ? 'green' : 'red'}>
                 ¥{netIncome.toLocaleString()}
@@ -395,7 +447,7 @@ export default function Reports() {
                 収益 ¥{totalRevenue.toLocaleString()} − 費用 ¥{totalExpenses.toLocaleString()}
               </Text>
             </Card>
-          </Group>
+          </Stack>
         </Paper>
       )}
     </Stack>
