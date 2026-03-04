@@ -227,7 +227,7 @@ export default function AccountSettings() {
   return (
     <Stack gap="md">
       <Group justify="space-between">
-        <Title order={2}>勘定科目設定</Title>
+        <Title order={2}>AAA勘定科目設定</Title>
         <Button leftSection={<IconPlus size={16} />} onClick={open}>
           追加する
         </Button>
