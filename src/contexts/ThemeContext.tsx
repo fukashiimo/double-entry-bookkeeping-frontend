@@ -22,22 +22,23 @@ interface ThemeProviderProps {
 }
 
 const STORAGE_KEY = 'primaryColor'
+const VALID_COLORS = ['orange', 'pastelPink', 'pastelBlue', 'pastelGreen', 'pastelYellow', 'pastelPurple']
+
+const getInitialColor = (): PrimaryColor => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw !== null && VALID_COLORS.includes(raw)) {
+      return raw as PrimaryColor
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return 'orange'
+}
 
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
-  const [primaryColor, setPrimaryColorState] = useState<PrimaryColor>('orange')
+  const [primaryColor, setPrimaryColorState] = useState<PrimaryColor>(getInitialColor)
   const { user, loading } = useAuth()
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      const validColors = ['orange', 'pastelPink', 'pastelBlue', 'pastelGreen', 'pastelYellow', 'pastelPurple']
-      if (raw !== null && validColors.includes(raw)) {
-        setPrimaryColorState(raw as PrimaryColor)
-      }
-    } catch {
-      // ignore storage errors
-    }
-  }, [])
 
   // サーバーの profiles.primary_color と同期
   useEffect(() => {
@@ -70,11 +71,8 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
         return
       }
       
-      if (data && data.primary_color) {
-        const validColors = ['orange', 'pastelPink', 'pastelBlue', 'pastelGreen', 'pastelYellow', 'pastelPurple']
-        if (validColors.includes(data.primary_color)) {
-          setPrimaryColorState(data.primary_color as PrimaryColor)
-        }
+      if (data && data.primary_color && VALID_COLORS.includes(data.primary_color)) {
+        setPrimaryColorState(data.primary_color as PrimaryColor)
       }
     }
     sync()
