@@ -1,255 +1,130 @@
 # 🚀 フロントエンド デプロイメントガイド
 
-## 📋 前提条件
+## 📋 概要
 
-1. **Node.js**: v18以上がインストールされていること
-2. **npm**: パッケージマネージャー
-3. **Git**: バージョン管理
-4. **Vercel/Netlifyアカウント**: デプロイ先（推奨: Vercel）
+このプロジェクトは **GitHub Pages** を使用してデプロイされています。
+`main` ブランチにpushすると、GitHub Actionsが自動的にビルド・デプロイを実行します。
 
-## 🏗️ ローカル開発環境のセットアップ
+- **本番URL**: https://dbbudget.app
+- **デプロイ方式**: GitHub Actions → GitHub Pages
+
+## 🚀 デプロイ方法
+
+### 自動デプロイ（推奨）
+
+1. コードを修正
+2. `main` ブランチにcommit & push
+3. GitHub Actionsが自動実行（約2-3分）
+4. デプロイ完了
+
+```bash
+git add .
+git commit -m "変更内容"
+git push origin main
+```
+
+### デプロイ状況の確認
+
+GitHub Actionsの実行状況は以下で確認できます：
+https://github.com/fukashiimo/double-entry-bookkeeping-frontend/actions
+
+## 🏗️ ローカル開発環境
 
 ### 1. 依存関係のインストール
 ```bash
 npm install
 ```
 
-### 2. 環境変数の設定
-```bash
-# .env.localファイルを作成
-cp .env.example .env.local
-```
-
-`.env.local`ファイルに以下を設定：
-```env
-VITE_SUPABASE_URL=https://snwmoptdzwlrtfhdawrm.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNud21vcHRkendscnRmaGRhd3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyMzE0NDksImV4cCI6MjA3MjgwNzQ0OX0.jY7hPj9jN0Wv0B5_H_GMe4pPracv3SYd-fstAw-ottE
-```
-
-### 3. 開発サーバーの起動
+### 2. 開発サーバーの起動
 ```bash
 npm run dev
 ```
 
 アプリケーションは `http://localhost:5173` で起動します。
 
-## 🌐 Vercel へのデプロイ（推奨）
-
-### 1. Vercel CLIのインストール
-```bash
-npm install -g vercel
-```
-
-### 2. Vercelにログイン
-```bash
-vercel login
-```
-
-### 3. プロジェクトのデプロイ
-```bash
-# プロジェクトルートで実行
-vercel
-
-# 初回デプロイ時は以下の質問に答える
-# ? Set up and deploy "~/path/to/project"? [Y/n] y
-# ? Which scope do you want to deploy to? [Your Account]
-# ? Link to existing project? [y/N] n
-# ? What's your project's name? double-entry-bookkeeping-frontend
-# ? In which directory is your code located? ./
-```
-
-### 4. 環境変数の設定
-Vercel Dashboardで環境変数を設定：
-1. [Vercel Dashboard](https://vercel.com/dashboard) にアクセス
-2. プロジェクトを選択
-3. Settings > Environment Variables
-4. 以下の変数を追加：
-   - `VITE_SUPABASE_URL`: `https://snwmoptdzwlrtfhdawrm.supabase.co`
-   - `VITE_SUPABASE_ANON_KEY`: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
-
-### 5. 再デプロイ
-```bash
-vercel --prod
-```
-
-## 🌐 Netlify へのデプロイ
-
-### 1. ビルド設定ファイルの作成
-`netlify.toml`ファイルを作成：
-```toml
-[build]
-  publish = "dist"
-  command = "npm run build"
-
-[build.environment]
-  NODE_VERSION = "18"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-```
-
-### 2. GitHubリポジトリにプッシュ
-```bash
-git add .
-git commit -m "Add deployment configuration"
-git push origin main
-```
-
-### 3. Netlifyでサイトを作成
-1. [Netlify Dashboard](https://app.netlify.com) にアクセス
-2. "New site from Git" をクリック
-3. GitHubを選択
-4. リポジトリ `double-entry-bookkeeping-frontend` を選択
-5. ビルド設定を確認：
-   - **Build command**: `npm run build`
-   - **Publish directory**: `dist`
-6. "Deploy site" をクリック
-
-### 4. 環境変数の設定
-1. Netlify Dashboard > Site settings > Environment variables
-2. 以下の変数を追加：
-   - `VITE_SUPABASE_URL`: `https://snwmoptdzwlrtfhdawrm.supabase.co`
-   - `VITE_SUPABASE_ANON_KEY`: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
-
-### 5. 再デプロイ
-環境変数設定後、手動で再デプロイを実行
-
-## 🧪 動作確認
-
-### ローカル環境
-```bash
-# 開発サーバー起動
-npm run dev
-
-# ブラウザで http://localhost:5173 にアクセス
-```
-
-### 本番環境
-デプロイ後、提供されたURLにアクセスして以下を確認：
-- [ ] アプリケーションが正常に読み込まれる
-- [ ] 勘定科目設定ページが動作する
-- [ ] 仕訳入力フォームが動作する
-- [ ] ダッシュボードが表示される
-
-## 🔧 ビルドとテスト
-
-### ビルド
+### 3. ビルド確認
 ```bash
 npm run build
-```
-
-### プレビュー
-```bash
 npm run preview
 ```
 
-### リンター
-```bash
-npm run lint
-```
+## ⚙️ GitHub Pages 設定
 
-## 📊 監視とログ
+### リポジトリ設定（Settings > Pages）
 
-### Vercel
-1. [Vercel Dashboard](https://vercel.com/dashboard)
-2. プロジェクト > Functions タブでログを確認
+| 項目 | 設定値 |
+|------|--------|
+| Source | GitHub Actions |
+| Custom domain | dbbudget.app |
 
-### Netlify
-1. [Netlify Dashboard](https://app.netlify.com)
-2. プロジェクト > Functions タブでログを確認
+### ワークフロー設定
+
+`.github/workflows/deploy.yml` で以下を実行：
+1. `npm ci` - 依存関係インストール
+2. `npm run build` - ビルド
+3. GitHub Pagesへデプロイ
+
+## 🧪 動作確認チェックリスト
+
+デプロイ後、以下を確認：
+- [ ] アプリケーションが正常に読み込まれる
+- [ ] ログイン/ログアウトが動作する
+- [ ] 勘定科目設定ページが動作する
+- [ ] 仕訳入力フォームが動作する
+- [ ] ダッシュボードが表示される
+- [ ] テーマ色の変更が保持される
 
 ## 🚨 トラブルシューティング
 
-### よくある問題
+### デプロイ後に反映されない
 
-1. **環境変数が読み込まれない**
-   - `.env.local`ファイルが正しい場所にあるか確認
-   - 変数名が`VITE_`で始まっているか確認
-   - 開発サーバーを再起動
+1. **GitHub Actionsの確認**
+   - Actionsページで最新のワークフローが成功しているか確認
+   - 失敗している場合はログを確認
 
-2. **ビルドエラー**
-   - Node.jsのバージョンを確認（v18以上）
-   - `npm install`を再実行
-   - `node_modules`を削除して再インストール
+2. **ブラウザキャッシュ**
+   - `Cmd + Shift + R`（Mac）でハードリロード
+   - シークレットモードで確認
 
-3. **API接続エラー**
-   - SupabaseのURLとキーが正しいか確認
-   - ネットワーク接続を確認
-   - ブラウザの開発者ツールでエラーを確認
+### ビルドエラー
 
-4. **CORS エラー**
-   - Supabaseの設定でフロントエンドのドメインが許可されているか確認
+1. Node.jsのバージョンを確認（v20推奨）
+2. `npm install`を再実行
+3. TypeScriptエラーを修正
 
-## 📈 パフォーマンス最適化
+### 404エラー
 
-### Vite設定の最適化
-`vite.config.ts`で以下を設定：
-```typescript
-export default defineConfig({
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['@mantine/core', '@mantine/hooks'],
-        },
-      },
-    },
-  },
-})
+- SPAルーティング用の`404.html`が`public/`フォルダに存在するか確認
+- `CNAME`ファイルが`public/`フォルダに存在するか確認
+
+## 📁 重要なファイル
+
+| ファイル | 説明 |
+|----------|------|
+| `.github/workflows/deploy.yml` | GitHub Actionsワークフロー |
+| `public/CNAME` | カスタムドメイン設定 |
+| `public/404.html` | SPAルーティング用 |
+| `vite.config.ts` | Viteビルド設定 |
+
+## 🔧 ビルドコマンド
+
+```bash
+# 開発サーバー
+npm run dev
+
+# ビルド
+npm run build
+
+# プレビュー
+npm run preview
+
+# リンター
+npm run lint
 ```
-
-### 画像最適化
-- WebP形式の使用
-- 適切なサイズでの画像提供
-- 遅延読み込みの実装
-
-## 🔒 セキュリティ
-
-### 推奨事項
-1. **環境変数**: 機密情報は環境変数で管理
-2. **HTTPS**: 本番環境では必ずHTTPSを使用
-3. **CSP**: Content Security Policyの設定
-4. **依存関係**: 定期的なセキュリティアップデート
 
 ## 📞 サポート
 
 問題が発生した場合:
 1. [Vite Docs](https://vitejs.dev/)
-2. [React Docs](https://react.dev/)
-3. [Mantine Docs](https://mantine.dev/)
-4. GitHub Issues で報告
-
-## 🚀 自動デプロイの設定
-
-### GitHub Actions（Vercel）
-Vercelは自動的にGitHubと連携してデプロイします。
-
-### GitHub Actions（Netlify）
-`.github/workflows/deploy.yml`を作成：
-```yaml
-name: Deploy to Netlify
-on:
-  push:
-    branches: [main]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: '18'
-      - run: npm install
-      - run: npm run build
-      - uses: netlify/actions/cli@master
-        with:
-          args: deploy --prod --dir=dist
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-```
-
-
+2. [GitHub Pages Docs](https://docs.github.com/en/pages)
+3. GitHub Issues で報告
