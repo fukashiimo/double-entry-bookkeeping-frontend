@@ -3,30 +3,25 @@
 ## 📋 概要
 
 このプロジェクトは **GitHub Pages** を使用してデプロイされています。
-`main` ブランチにpushすると、GitHub Actionsが自動的にビルド・デプロイを実行します。
 
 - **本番URL**: https://dbbudget.app
-- **デプロイ方式**: GitHub Actions → GitHub Pages
+- **デプロイ方式**: `npm run deploy` → gh-pagesブランチ → GitHub Pages
 
 ## 🚀 デプロイ方法
 
-### 自動デプロイ（推奨）
-
-1. コードを修正
-2. `main` ブランチにcommit & push
-3. GitHub Actionsが自動実行（約2-3分）
-4. デプロイ完了
-
+### 1. コードを修正してコミット
 ```bash
 git add .
 git commit -m "変更内容"
 git push origin main
 ```
 
-### デプロイ状況の確認
+### 2. デプロイ実行
+```bash
+npm run deploy
+```
 
-GitHub Actionsの実行状況は以下で確認できます：
-https://github.com/fukashiimo/double-entry-bookkeeping-frontend/actions
+これで本番環境に反映されます（通常1-2分）。
 
 ## 🏗️ ローカル開発環境
 
@@ -54,15 +49,9 @@ npm run preview
 
 | 項目 | 設定値 |
 |------|--------|
-| Source | GitHub Actions |
+| Source | Deploy from a branch |
+| Branch | gh-pages / (root) |
 | Custom domain | dbbudget.app |
-
-### ワークフロー設定
-
-`.github/workflows/deploy.yml` で以下を実行：
-1. `npm ci` - 依存関係インストール
-2. `npm run build` - ビルド
-3. GitHub Pagesへデプロイ
 
 ## 🧪 動作確認チェックリスト
 
@@ -78,13 +67,13 @@ npm run preview
 
 ### デプロイ後に反映されない
 
-1. **GitHub Actionsの確認**
-   - Actionsページで最新のワークフローが成功しているか確認
-   - 失敗している場合はログを確認
-
-2. **ブラウザキャッシュ**
+1. **ブラウザキャッシュ**
    - `Cmd + Shift + R`（Mac）でハードリロード
    - シークレットモードで確認
+
+2. **GitHub Pagesの設定確認**
+   - Source: 「Deploy from a branch」になっているか
+   - Branch: 「gh-pages」になっているか
 
 ### ビルドエラー
 
@@ -101,10 +90,10 @@ npm run preview
 
 | ファイル | 説明 |
 |----------|------|
-| `.github/workflows/deploy.yml` | GitHub Actionsワークフロー |
 | `public/CNAME` | カスタムドメイン設定 |
 | `public/404.html` | SPAルーティング用 |
 | `vite.config.ts` | Viteビルド設定 |
+| `package.json` | deploy スクリプト定義 |
 
 ## 🔧 ビルドコマンド
 
@@ -117,6 +106,9 @@ npm run build
 
 # プレビュー
 npm run preview
+
+# デプロイ
+npm run deploy
 
 # リンター
 npm run lint
