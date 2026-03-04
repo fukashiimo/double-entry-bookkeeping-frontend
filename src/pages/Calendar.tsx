@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Alert, ActionIcon, Box, Group, Loader, Modal, Paper, Stack, Table, Text, Title } from '@mantine/core';
-import { IconAlertCircle, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+import { useState, useMemo } from 'react';
+import { Alert, ActionIcon, Box, Group, Loader, Modal, Paper, Stack, Table, Text, Title, ThemeIcon, SimpleGrid } from '@mantine/core';
+import { IconAlertCircle, IconChevronLeft, IconChevronRight, IconTrendingUp, IconTrendingDown, IconScale } from '@tabler/icons-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { useRealtime } from '../hooks/useRealtime';
 import { useJournalEntries } from '../hooks/useJournalEntries';
@@ -71,6 +71,21 @@ const CalendarPage = () => {
   const dailyTotals = dashboardData?.dailyTotals ?? [];
   const currentMonthString = `${selectedYear}年${selectedMonthNumber}月`;
 
+  // 月間合計を計算
+  const monthlyTotals = useMemo(() => {
+    let income = 0;
+    let expenses = 0;
+    for (const day of dailyTotals) {
+      income += day.income || 0;
+      expenses += day.expenses || 0;
+    }
+    return {
+      income,
+      expense: expenses,
+      profit: income - expenses,
+    };
+  }, [dailyTotals]);
+
   return (
     <Stack gap="xl">
       <Box>
@@ -87,6 +102,55 @@ const CalendarPage = () => {
           この月のデータはありません。
         </Alert>
       )}
+
+      {/* 月間合計サマリー */}
+      <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
+        <Paper p="md" radius="md" withBorder>
+          <Group>
+            <ThemeIcon color="teal" size="lg" radius="md" variant="light">
+              <IconTrendingUp size={20} />
+            </ThemeIcon>
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                月間収入
+              </Text>
+              <Text size="lg" fw={700} c="teal">
+                ¥{monthlyTotals.income.toLocaleString()}
+              </Text>
+            </Box>
+          </Group>
+        </Paper>
+        <Paper p="md" radius="md" withBorder>
+          <Group>
+            <ThemeIcon color="red" size="lg" radius="md" variant="light">
+              <IconTrendingDown size={20} />
+            </ThemeIcon>
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                月間支出
+              </Text>
+              <Text size="lg" fw={700} c="red">
+                ¥{monthlyTotals.expense.toLocaleString()}
+              </Text>
+            </Box>
+          </Group>
+        </Paper>
+        <Paper p="md" radius="md" withBorder>
+          <Group>
+            <ThemeIcon color={monthlyTotals.profit >= 0 ? 'blue' : 'orange'} size="lg" radius="md" variant="light">
+              <IconScale size={20} />
+            </ThemeIcon>
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                収支
+              </Text>
+              <Text size="lg" fw={700} c={monthlyTotals.profit >= 0 ? 'blue' : 'orange'}>
+                {monthlyTotals.profit >= 0 ? '+' : ''}¥{monthlyTotals.profit.toLocaleString()}
+              </Text>
+            </Box>
+          </Group>
+        </Paper>
+      </SimpleGrid>
 
       <Paper p="xl" radius="md" withBorder>
         <Group justify="space-between" mb="lg">

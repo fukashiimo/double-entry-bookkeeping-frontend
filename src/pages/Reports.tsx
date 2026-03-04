@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Paper,
   Title,
@@ -13,9 +13,12 @@ import {
   Card,
   ThemeIcon,
   Divider,
-  Badge
+  Badge,
+  Button,
+  SimpleGrid,
+  Switch,
+  Select
 } from '@mantine/core';
-import { MonthPickerInput } from '@mantine/dates';
 import {
   IconAlertCircle,
   IconTrendingUp,
@@ -23,19 +26,34 @@ import {
   IconWallet,
   IconReceipt,
   IconPigMoney,
-  IconBuildingBank
+  IconBuildingBank,
+  IconChevronLeft,
+  IconChevronRight
 } from '@tabler/icons-react';
 import { PieChart } from '@mantine/charts';
 import { useDashboard } from '../hooks/useDashboard';
 
 export default function Reports() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [reportType, setReportType] = useState<string>('summary');
+  const [hideZeroAccounts, setHideZeroAccounts] = useState<boolean>(false);
 
-  const year = selectedDate.getFullYear();
-  const month = selectedDate.getMonth() + 1;
+  const { data, loading, error } = useDashboard(selectedYear, selectedMonth);
 
-  const { data, loading, error } = useDashboard(year, month);
+  // 年選択用のオプション
+  const yearOptions = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return [
+      { value: String(currentYear - 2), label: `${currentYear - 2}年` },
+      { value: String(currentYear - 1), label: `${currentYear - 1}年` },
+      { value: String(currentYear), label: `${currentYear}年` },
+      { value: String(currentYear + 1), label: `${currentYear + 1}年` },
+    ];
+  }, []);
+
+  // ツールチップフォーマット関数
+  const tooltipFormatter = (value: number) => `¥${value.toLocaleString()}`;
 
   if (loading) {
     return (
@@ -54,6 +72,22 @@ export default function Reports() {
     );
   }
 
+  // 貸借対照表データ（0円フィルター適用）
+  const filteredAssets = useMemo(() => {
+    const assets = data?.balanceSheet?.assets || [];
+    return hideZeroAccounts ? assets.filter(item => item.amount !== 0) : assets;
+  }, [data?.balanceSheet?.assets, hideZeroAccounts]);
+
+  const filteredLiabilities = useMemo(() => {
+    const liabilities = data?.balanceSheet?.liabilities || [];
+    return hideZeroAccounts ? liabilities.filter(item => item.amount !== 0) : liabilities;
+  }, [data?.balanceSheet?.liabilities, hideZeroAccounts]);
+
+  const filteredEquity = useMemo(() => {
+    const equity = data?.balanceSheet?.equity || [];
+    return hideZeroAccounts ? equity.filter(item => item.amount !== 0) : equity;
+  }, [data?.balanceSheet?.equity, hideZeroAccounts]);
+
   const totalAssets = data?.balanceSheet?.assets?.reduce((sum, item) => sum + item.amount, 0) || 0;
   const totalLiabilities = data?.balanceSheet?.liabilities?.reduce((sum, item) => sum + item.amount, 0) || 0;
   const totalEquity = data?.balanceSheet?.equity?.reduce((sum, item) => sum + item.amount, 0) || 0;
@@ -61,7 +95,18 @@ export default function Reports() {
   const totalExpenses = data?.summary?.totalExpenses || 0;
   const netIncome = data?.summary?.netIncome || 0;
 
-  // 円グラフ用データ
+  // 損益計算書データ（0円フィルター適用）
+  const filteredIncomeData = useMemo(() => {
+    const incomeData = data?.incomeData || [];
+    return hideZeroAccounts ? incomeData.filter((item: { name: string; value: number }) => item.value !== 0) : incomeData;
+  }, [data?.incomeData, hideZeroAccounts]);
+
+  const filteredExpenseData = useMemo(() => {
+    const expenseData = data?.expenseData || [];
+    return hideZeroAccounts ? expenseData.filter((item: { name: string; value: number }) => item.value !== 0) : expenseData;
+  }, [data?.expenseData, hideZeroAccounts]);
+
+  // 円グラフ用データ（0より大きいもののみ）
   const expenseChartData = (data?.expenseData || [])
     .filter((item: { name: string; value: number }) => item.value > 0)
     .map((item: { name: string; value: number }, index: number) => ({
@@ -78,19 +123,66 @@ export default function Reports() {
       color: ['green.6', 'teal.6', 'cyan.6', 'blue.6', 'indigo.6'][index % 5]
     }));
 
+  const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
   return (
     <Stack gap="md">
       <Group justify="space-between">
         <Title order={2}>ダッシュボード</Title>
-        <Group>
-          <MonthPickerInput
-            value={selectedDate}
-            onChange={(date) => date && setSelectedDate(date)}
-            placeholder="月を選択"
-            style={{ width: 150 }}
+        <Group gap="xs">
+          <Switch
+            label="0円非表示"
+            checked={hideZeroAccounts}
+            onChange={(event) => setHideZeroAccounts(event.currentTarget.checked)}
+            size="sm"
           />
         </Group>
       </Group>
+
+      {/* 年・月選択 */}
+      <Paper p="md" radius="md" withBorder>
+        <Group justify="space-between" mb="md">
+          <Group gap="xs">
+            <Button
+              variant="subtle"
+              size="compact-sm"
+              leftSection={<IconChevronLeft size={14} />}
+              onClick={() => setSelectedYear(y => y - 1)}
+            >
+              前年
+            </Button>
+            <Select
+              value={String(selectedYear)}
+              onChange={(val) => val && setSelectedYear(parseInt(val, 10))}
+              data={yearOptions}
+              style={{ width: 110 }}
+              size="sm"
+            />
+            <Button
+              variant="subtle"
+              size="compact-sm"
+              rightSection={<IconChevronRight size={14} />}
+              onClick={() => setSelectedYear(y => y + 1)}
+            >
+              翌年
+            </Button>
+          </Group>
+          <Text fw={600} size="lg">{selectedYear}年{selectedMonth}月</Text>
+        </Group>
+        <SimpleGrid cols={{ base: 4, sm: 6, md: 12 }} spacing="xs">
+          {months.map((m) => (
+            <Button
+              key={m}
+              variant={selectedMonth === m ? 'filled' : 'light'}
+              size="compact-sm"
+              onClick={() => setSelectedMonth(m)}
+              fullWidth
+            >
+              {m}月
+            </Button>
+          ))}
+        </SimpleGrid>
+      </Paper>
 
       <SegmentedControl
         value={reportType}
@@ -177,6 +269,7 @@ export default function Reports() {
                     tooltipDataSource="segment"
                     h={250}
                     startAngle={90}
+                    valueFormatter={tooltipFormatter}
                   />
                 ) : (
                   <Text c="dimmed" ta="center" py="xl">収入データがありません</Text>
@@ -196,6 +289,7 @@ export default function Reports() {
                     tooltipDataSource="segment"
                     h={250}
                     startAngle={90}
+                    valueFormatter={tooltipFormatter}
                   />
                 ) : (
                   <Text c="dimmed" ta="center" py="xl">支出データがありません</Text>
@@ -276,7 +370,7 @@ export default function Reports() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {(data?.balanceSheet?.assets || []).map((item, index) => (
+                  {filteredAssets.map((item, index) => (
                     <Table.Tr key={index}>
                       <Table.Td>{item.name}</Table.Td>
                       <Table.Td style={{ textAlign: 'right' }}>¥{item.amount.toLocaleString()}</Table.Td>
@@ -308,7 +402,7 @@ export default function Reports() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {(data?.balanceSheet?.liabilities || []).map((item, index) => (
+                  {filteredLiabilities.map((item, index) => (
                     <Table.Tr key={index}>
                       <Table.Td>{item.name}</Table.Td>
                       <Table.Td style={{ textAlign: 'right' }}>¥{item.amount.toLocaleString()}</Table.Td>
@@ -339,7 +433,7 @@ export default function Reports() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {(data?.balanceSheet?.equity || []).map((item, index) => (
+                  {filteredEquity.map((item, index) => (
                     <Table.Tr key={index}>
                       <Table.Td>{item.name}</Table.Td>
                       <Table.Td style={{ textAlign: 'right' }}>¥{item.amount.toLocaleString()}</Table.Td>
@@ -385,7 +479,7 @@ export default function Reports() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {(data?.incomeData || []).map((item: { name: string; value: number }, index: number) => (
+                  {filteredIncomeData.map((item: { name: string; value: number }, index: number) => (
                     <Table.Tr key={index}>
                       <Table.Td>{item.name}</Table.Td>
                       <Table.Td style={{ textAlign: 'right' }}>¥{item.value.toLocaleString()}</Table.Td>
@@ -419,7 +513,7 @@ export default function Reports() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {(data?.expenseData || []).map((item: { name: string; value: number }, index: number) => (
+                  {filteredExpenseData.map((item: { name: string; value: number }, index: number) => (
                     <Table.Tr key={index}>
                       <Table.Td>{item.name}</Table.Td>
                       <Table.Td style={{ textAlign: 'right' }}>¥{item.value.toLocaleString()}</Table.Td>

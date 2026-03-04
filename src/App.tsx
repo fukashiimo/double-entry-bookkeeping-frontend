@@ -31,11 +31,14 @@ function AppContent() {
     amount: number;
   } | null>(null);
 
-  const handleSubmit = (data: { date: Date | null; [key: string]: unknown }) => {
+  const handleSubmit = (data: { date: Date | null; [key: string]: unknown }, isEditMode?: boolean) => {
     console.log('Form submitted:', data);
-    setEditData(null); // 編集完了後は編集データをクリア
-    // 仕訳帳に遷移
-    navigate('/journal-list');
+    // 編集モードの場合のみ仕訳帳に遷移
+    if (isEditMode) {
+      setEditData(null);
+      navigate('/journal-list');
+    }
+    // 新規登録の場合は同じ画面に留まる（連続入力対応）
   };
 
   const handleEdit = (data: {

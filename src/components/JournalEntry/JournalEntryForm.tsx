@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { Box, NumberInput, Textarea, Button, Select, Grid, Paper, Title, Alert, Loader, Stack, Text, SegmentedControl, Stepper, Group, useMantineTheme, useMantineColorScheme } from '@mantine/core';
+import { useMemo, useState, useRef } from 'react';
+import type { KeyboardEvent } from 'react';
+import { Box, NumberInput, TextInput, Button, Select, Grid, Paper, Title, Alert, Loader, Stack, Text, SegmentedControl, Stepper, Group, useMantineTheme, useMantineColorScheme } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { IconAlertCircle, IconArrowRight, IconArrowLeft } from '@tabler/icons-react';
 import { useForm } from '@mantine/form';
@@ -11,7 +12,7 @@ import 'dayjs/locale/ja';
 type InputMode = 'transfer' | 'journal' | 'simple';
 
 interface JournalEntryFormProps {
-  onSubmit?: (data: { date: Date | null; [key: string]: unknown }) => void;
+  onSubmit?: (data: { date: Date | null; [key: string]: unknown }, isEditMode?: boolean) => void;
   editData?: {
     id: number;
     date: string;
@@ -35,6 +36,15 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
   const [simpleStep, setSimpleStep] = useState(0);
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // 摘要欄でEnterキーを押すとフォームを送信
+  const handleDescriptionKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      formRef.current?.requestSubmit();
+    }
+  };
 
   const isEditMode = !!editData;
 
@@ -53,9 +63,9 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
       description: (value: string) => (value.length < 1 ? '摘要を入力してください' : null),
       debitAccount: (value: string) => (value.length < 1 ? '借方勘定を選択してください' : null),
       creditAccount: (value: string) => (value.length < 1 ? '貸方勘定を選択してください' : null),
-      debitAmount: (value: number) => (value <= 0 ? '借方金額を入力してください' : null),
+      debitAmount: (value: number) => (value === 0 ? '借方金額を入力してください' : null),
       creditAmount: (value: number, values) => {
-        if (value <= 0) return '貸方金額を入力してください';
+        if (value === 0) return '貸方金額を入力してください';
         if (value !== values.debitAmount) return '借方金額と貸方金額が一致しません';
         return null;
       },
@@ -120,9 +130,13 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
     setError(null);
 
     try {
-      // Supabase APIに送信
+      // Supabase APIに送信（タイムゾーンオフセットを考慮してローカル日付を使用）
+      const localDate = values.date;
+      const year = localDate.getFullYear();
+      const month = String(localDate.getMonth() + 1).padStart(2, '0');
+      const day = String(localDate.getDate()).padStart(2, '0');
       const entryData = {
-        date: values.date.toISOString().split('T')[0],
+        date: `${year}-${month}-${day}`,
         description: values.description,
         debitAccount: values.debitAccount,
         debitSubaccount: values.debitSubaccount || null,
@@ -142,14 +156,16 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
         await createJournalEntry(entryData);
       }
 
-      // フォームをリセット
-      form.reset();
-      setSimpleStep(0);
-
       // 親コンポーネントのonSubmitがあれば実行
       if (onSubmit) {
-        onSubmit(values);
+        onSubmit(values, isEditMode);
       }
+
+      // フォームをリセット（日付は保持して連続入力しやすくする）
+      const currentDate = form.values.date;
+      form.reset();
+      form.setFieldValue('date', currentDate);
+      setSimpleStep(0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
       console.error('Error submitting form:', err);
@@ -259,7 +275,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
                 label="借方金額"
                 placeholder="金額を入力"
                 required
-                min={0}
+                allowNegative
                 thousandSeparator=","
                 value={form.values.debitAmount}
                 onChange={handleDebitAmountChange}
@@ -305,7 +321,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
                 label="貸方金額"
                 placeholder="金額を入力"
                 required
-                min={0}
+                allowNegative
                 thousandSeparator=","
                 value={form.values.creditAmount}
                 onChange={handleCreditAmountChange}
@@ -317,11 +333,11 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
       </Grid>
 
       {/* 摘要 */}
-      <Textarea
+      <TextInput
         label="摘要"
-        placeholder="取引の内容を入力"
-        minRows={2}
+        placeholder="取引の内容を入力（Enterで登録）"
         mb="md"
+        onKeyDown={handleDescriptionKeyDown}
         {...form.getInputProps('description')}
       />
     </>
@@ -387,7 +403,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
           <Box p="xs" style={{ backgroundColor: colorScheme === 'dark' ? theme.colors.dark[7] : 'white' }}>
             <NumberInput
               placeholder="金額"
-              min={0}
+              allowNegative
               size="sm"
               thousandSeparator=","
               value={form.values.debitAmount}
@@ -414,7 +430,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
           <Box p="xs" style={{ backgroundColor: colorScheme === 'dark' ? theme.colors.dark[7] : 'white' }}>
             <NumberInput
               placeholder="金額"
-              min={0}
+              allowNegative
               size="sm"
               thousandSeparator=","
               value={form.values.creditAmount}
@@ -452,11 +468,11 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
       </Grid>
 
       {/* 摘要 */}
-      <Textarea
+      <TextInput
         label="摘要"
-        placeholder="取引の内容を入力"
-        minRows={2}
+        placeholder="取引の内容を入力（Enterで登録）"
         mb="md"
+        onKeyDown={handleDescriptionKeyDown}
         {...form.getInputProps('description')}
       />
     </>
@@ -484,11 +500,11 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
             required
             size="lg"
           />
-          <Textarea
+          <TextInput
             label="何をしましたか？（摘要）"
             placeholder="例：コンビニで文房具を購入"
-            minRows={3}
             size="lg"
+            onKeyDown={handleDescriptionKeyDown}
             {...form.getInputProps('description')}
           />
         </Stack>
@@ -528,7 +544,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
             label="いくらですか？"
             placeholder="金額を入力"
             required
-            min={0}
+            allowNegative
             size="lg"
             thousandSeparator=","
             value={form.values.debitAmount}
@@ -572,7 +588,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
             label="いくらですか？"
             placeholder="金額を入力"
             required
-            min={0}
+            allowNegative
             size="lg"
             thousandSeparator=","
             value={form.values.creditAmount}
@@ -646,7 +662,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel }: JournalEntryF
 
   return (
     <Paper p="md" radius="md" withBorder>
-      <form onSubmit={form.onSubmit(handleSubmit)}>
+      <form ref={formRef} onSubmit={form.onSubmit(handleSubmit)}>
         <Group justify="space-between" mb="md">
           <Title order={2}>{isEditMode ? '仕訳編集' : '仕訳入力'}</Title>
           {!isEditMode && (

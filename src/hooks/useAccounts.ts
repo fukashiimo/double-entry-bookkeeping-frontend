@@ -113,34 +113,46 @@ export const useAccounts = () => {
 
       const updatedAccount = await response.json()
       
-      // ローカル状態を更新
+      // ローカル状態を更新（元の位置を保持）
       if (accounts) {
         const updatedAccounts = { ...accounts }
-        
-        // 古い勘定科目を削除
-        Object.keys(updatedAccounts).forEach(key => {
-          const accountType = key as keyof GroupedAccounts
-          updatedAccounts[accountType] = updatedAccounts[accountType].filter(account => account.id !== id)
-        })
-        
-        // 新しい勘定科目を追加
-        switch (type) {
-          case '資産':
-            updatedAccounts.assets = [...updatedAccounts.assets, updatedAccount]
-            break
-          case '負債':
-            updatedAccounts.liabilities = [...updatedAccounts.liabilities, updatedAccount]
-            break
-          case '純資産':
-            updatedAccounts.equity = [...updatedAccounts.equity, updatedAccount]
-            break
-          case '収益':
-            updatedAccounts.revenue = [...updatedAccounts.revenue, updatedAccount]
-            break
-          case '費用':
-            updatedAccounts.expenses = [...updatedAccounts.expenses, updatedAccount]
-            break
+
+        // タイプが変わった場合のみ移動、そうでなければin-place更新
+        const typeToKey: Record<Account['type'], keyof GroupedAccounts> = {
+          '資産': 'assets',
+          '負債': 'liabilities',
+          '純資産': 'equity',
+          '収益': 'revenue',
+          '費用': 'expenses',
         }
+
+        // 元の位置を探す
+        let originalKey: keyof GroupedAccounts | null = null
+        let originalIndex = -1
+        for (const key of Object.keys(updatedAccounts) as (keyof GroupedAccounts)[]) {
+          const idx = updatedAccounts[key].findIndex(account => account.id === id)
+          if (idx !== -1) {
+            originalKey = key
+            originalIndex = idx
+            break
+          }
+        }
+
+        const newKey = typeToKey[type]
+
+        if (originalKey && originalKey === newKey && originalIndex !== -1) {
+          // タイプが変わらない場合：元の位置で更新
+          updatedAccounts[newKey] = updatedAccounts[newKey].map((account, idx) =>
+            idx === originalIndex ? updatedAccount : account
+          )
+        } else {
+          // タイプが変わった場合：削除して新しいグループに追加
+          if (originalKey) {
+            updatedAccounts[originalKey] = updatedAccounts[originalKey].filter(account => account.id !== id)
+          }
+          updatedAccounts[newKey] = [...updatedAccounts[newKey], updatedAccount]
+        }
+
         setAccounts(updatedAccounts)
       }
 
