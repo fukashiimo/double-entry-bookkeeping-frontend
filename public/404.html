@@ -6,13 +6,13 @@
     <title>複式簿記システム</title>
     <script type="text/javascript">
       // SPAルーティング用のリダイレクト
-      // カスタムドメイン（dbbudget.app）用のシンプルなリダイレクト
-      var path = window.location.pathname;
-      var search = window.location.search;
-      var hash = window.location.hash;
-      
-      // index.htmlにリダイレクト（パスとクエリパラメータ、ハッシュを保持）
-      window.location.replace('/index.html' + path + search + hash);
+      // GitHub Pages / カスタムドメイン用
+      var pathSegmentsToKeep = 0;
+      var l = window.location;
+
+      // パスをセッションストレージに保存してからルートにリダイレクト
+      sessionStorage.setItem('redirect', l.pathname + l.search + l.hash);
+      l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/');
     </script>
   </head>
   <body>

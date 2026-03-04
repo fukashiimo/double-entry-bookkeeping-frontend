@@ -3,11 +3,6 @@ import { useTheme, type PrimaryColor } from '../contexts/ThemeContext';
 
 const colorOptions: Array<{ value: PrimaryColor; label: string; color: string }> = [
   { value: 'orange', label: 'オレンジ', color: '#FFB31E' },
-  { value: 'blue', label: 'ブルー', color: '#1F91EB' },
-  { value: 'green', label: 'グリーン', color: '#3BAE6B' },
-  { value: 'violet', label: 'バイオレット', color: '#7566FF' },
-  { value: 'indigo', label: 'インディゴ', color: '#4733FF' },
-  { value: 'red', label: 'レッド', color: '#E53E3E' },
   { value: 'pastelPink', label: 'パステルピンク', color: '#FFB6C1' },
   { value: 'pastelBlue', label: 'パステルブルー', color: '#AED9E0' },
   { value: 'pastelGreen', label: 'パステルグリーン', color: '#B4E4B4' },

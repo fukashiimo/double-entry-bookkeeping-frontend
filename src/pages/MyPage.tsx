@@ -45,7 +45,7 @@ export default function MyPage() {
           </Text>
           <Group mt="md">
             {adsEnabled ? (
-              <Button color="orange" onClick={async () => {
+              <Button  onClick={async () => {
                 await startAdRemovalCheckout()
               }}>
                 広告を停止（決済に進む）
