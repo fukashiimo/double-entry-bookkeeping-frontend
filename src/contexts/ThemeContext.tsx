@@ -71,7 +71,10 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
       }
       
       if (data && data.primary_color) {
-        setPrimaryColorState(data.primary_color as PrimaryColor)
+        const validColors = ['orange', 'pastelPink', 'pastelBlue', 'pastelGreen', 'pastelYellow', 'pastelPurple']
+        if (validColors.includes(data.primary_color)) {
+          setPrimaryColorState(data.primary_color as PrimaryColor)
+        }
       }
     }
     sync()
@@ -89,7 +92,10 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
     setPrimaryColorState(color)
     try {
       if (user) {
-        await supabase.from('profiles').upsert({ primary_color: color })
+        await supabase
+          .from('profiles')
+          .update({ primary_color: color })
+          .eq('user_id', user.id)
       }
     } catch (error) {
       console.error('Error updating primary color:', error)
