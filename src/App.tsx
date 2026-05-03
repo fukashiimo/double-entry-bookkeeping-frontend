@@ -5,7 +5,6 @@ import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import '@mantine/charts/styles.css';
 import { AuthProvider } from './contexts/AuthContext';
-import { AdsProvider } from './contexts/AdsContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import MainLayout from './components/Layout/MainLayout';
@@ -16,6 +15,7 @@ import MyPage from './pages/MyPage';
 import CalendarPage from './pages/Calendar';
 import Settings from './pages/Settings';
 import Reports from './pages/Reports';
+import Pricing from './pages/Pricing';
 import Login from './pages/Login';
 import { theme } from './theme/theme';
 import { createTheme } from '@mantine/core';
@@ -84,6 +84,7 @@ function AppContent() {
                 <Route path="/mypage" element={<MyPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/pricing" element={<Pricing />} />
                 <Route path="/reports" element={<Reports />} />
               </Routes>
             </MainLayout>
@@ -118,9 +119,7 @@ function App() {
     <Router>
       <AuthProvider>
         <ThemeProvider>
-          <AdsProvider>
-            <ThemedApp />
-          </AdsProvider>
+          <ThemedApp />
         </ThemeProvider>
       </AuthProvider>
     </Router>

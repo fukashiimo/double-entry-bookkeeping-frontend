@@ -12,9 +12,9 @@ import {
   IconSun,
   IconMoon,
   IconCalendarStats,
+  IconCreditCard,
 } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
-import AdBanner from '../Ads/AdBanner';
 
 const mainLinks = [
   { icon: IconChartPie, label: 'ダッシュボード', path: '/reports' },
@@ -22,6 +22,7 @@ const mainLinks = [
   { icon: IconPlus, label: '仕訳入力', path: '/journal-entry' },
   { icon: IconCalendarStats, label: 'カレンダー', path: '/calendar' },
   { icon: IconList, label: '勘定科目設定', path: '/account-settings' },
+  { icon: IconCreditCard, label: '料金プラン', path: '/pricing' },
   { icon: IconSettings, label: '設定', path: '/settings' },
   { icon: IconUser, label: 'マイページ', path: '/mypage' },
 ];
@@ -118,8 +119,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </Group>
           
           <Group gap="xs">
-            <ActionIcon variant="subtle" size="lg" radius="xl" onClick={toggleColorScheme} aria-label="Toggle color scheme">
-              {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
+            <ActionIcon variant="subtle" size="lg" radius="xl" onClick={toggleColorScheme} aria-label="Toggle color scheme" c="white">
+              {colorScheme === 'dark' ? <IconSun size={18} color="white" /> : <IconMoon size={18} color="white" />}
             </ActionIcon>
 
             <Menu shadow="md" width={200}>
@@ -183,7 +184,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
           })}
         >
           {children}
-          <AdBanner placement="bottom" />
         </Box>
         
         {/* モバイル用フローティングボタン */}

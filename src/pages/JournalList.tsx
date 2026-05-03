@@ -92,17 +92,6 @@ export default function JournalList({ onEdit }: JournalListProps) {
 
   const ITEMS_PER_PAGE = parseInt(itemsPerPage, 10);
 
-  // ソート切り替え
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('desc');
-    }
-    setPage(1); // ソート変更時はページを1に戻す
-  };
-
   // アカウントの選択肢をAPIから取得
   const accountOptions = accounts ? [
     ...accounts.assets.map(account => ({ value: account.name, label: account.name })),
@@ -111,25 +100,6 @@ export default function JournalList({ onEdit }: JournalListProps) {
     ...accounts.revenue.map(account => ({ value: account.name, label: account.name })),
     ...accounts.expenses.map(account => ({ value: account.name, label: account.name })),
   ] : [];
-
-  // ローディング状態の処理
-  if (entriesLoading || accountsLoading) {
-    return (
-      <Stack align="center" justify="center" h="50vh">
-        <Loader size="lg" />
-        <Text>データを読み込み中...</Text>
-      </Stack>
-    );
-  }
-
-  // エラー状態の処理
-  if (entriesError || accountsError) {
-    return (
-      <Alert icon={<IconAlertCircle size="1rem" />} title="エラー" color="red">
-        {entriesError || accountsError}
-      </Alert>
-    );
-  }
 
   // フィルタリング、ソート、ページネーションの適用
   const processedData = useMemo(() => {
@@ -178,6 +148,35 @@ export default function JournalList({ onEdit }: JournalListProps) {
 
   const filteredData = processedData.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
   const totalPages = Math.ceil(processedData.length / ITEMS_PER_PAGE);
+
+  // ソート切り替え
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+    setPage(1); // ソート変更時はページを1に戻す
+  };
+
+  // ローディング状態の処理（初回取得時のみ表示）
+  if ((entriesLoading && journalEntries.length === 0) || (accountsLoading && !accounts)) {
+    return (
+      <Stack align="center" justify="center" h="50vh">
+        <Loader size="lg" />
+      </Stack>
+    );
+  }
+
+  // エラー状態の処理
+  if (entriesError || accountsError) {
+    return (
+      <Alert icon={<IconAlertCircle size="1rem" />} title="エラー" color="red">
+        {entriesError || accountsError}
+      </Alert>
+    );
+  }
 
   const handleExport = () => {
     // CSVエクスポート

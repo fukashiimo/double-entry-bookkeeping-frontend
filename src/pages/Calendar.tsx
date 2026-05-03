@@ -1,18 +1,30 @@
 import { useState, useMemo } from 'react';
-import { Alert, ActionIcon, Box, Group, Loader, Modal, Paper, Stack, Table, Text, Title, ThemeIcon, SimpleGrid } from '@mantine/core';
-import { IconAlertCircle, IconChevronLeft, IconChevronRight, IconTrendingUp, IconTrendingDown, IconScale } from '@tabler/icons-react';
+import { useNavigate } from 'react-router-dom';
+import { Alert, ActionIcon, Box, Button, Group, Loader, Modal, Paper, Stack, Table, Text, Title, ThemeIcon, SimpleGrid } from '@mantine/core';
+import { IconAlertCircle, IconChevronLeft, IconChevronRight, IconTrendingUp, IconTrendingDown, IconScale, IconChartPie } from '@tabler/icons-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { useRealtime } from '../hooks/useRealtime';
 import { useJournalEntries } from '../hooks/useJournalEntries';
 import { MonthlyCalendar } from '../components/MonthlyCalendar';
 
 const CalendarPage = () => {
+  const navigate = useNavigate();
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [modalOpened, setModalOpened] = useState(false);
+
+  // ダッシュボードで選択した月を表示
+  const handleGoToDashboard = () => {
+    if (selectedDate) {
+      const date = new Date(selectedDate);
+      navigate(`/reports?year=${date.getFullYear()}&month=${date.getMonth() + 1}`);
+    } else {
+      navigate(`/reports?year=${selectedYear}&month=${selectedMonthNumber}`);
+    }
+  };
 
   const selectedYear = selectedMonth.getFullYear();
   const selectedMonthNumber = selectedMonth.getMonth() + 1;
@@ -39,11 +51,26 @@ const CalendarPage = () => {
     (entry) => entry.date === selectedDate
   );
 
-  if (loading) {
+  // 月間合計を計算 - hooks は条件分岐の前に配置
+  const dailyTotals = dashboardData?.dailyTotals ?? [];
+  const monthlyTotals = useMemo(() => {
+    let income = 0;
+    let expenses = 0;
+    for (const day of dailyTotals) {
+      income += day.income || 0;
+      expenses += day.expenses || 0;
+    }
+    return {
+      income,
+      expense: expenses,
+      profit: income - expenses,
+    };
+  }, [dailyTotals]);
+
+  if (loading && !dashboardData) {
     return (
       <Stack align="center" justify="center" h="50vh">
         <Loader size="lg" />
-        <Text>カレンダーのデータを読み込み中...</Text>
       </Stack>
     );
   }
@@ -68,23 +95,7 @@ const CalendarPage = () => {
 
   const year = dashboardData?.year ?? selectedYear;
   const month = dashboardData?.month ?? selectedMonthNumber;
-  const dailyTotals = dashboardData?.dailyTotals ?? [];
   const currentMonthString = `${selectedYear}年${selectedMonthNumber}月`;
-
-  // 月間合計を計算
-  const monthlyTotals = useMemo(() => {
-    let income = 0;
-    let expenses = 0;
-    for (const day of dailyTotals) {
-      income += day.income || 0;
-      expenses += day.expenses || 0;
-    }
-    return {
-      income,
-      expense: expenses,
-      profit: income - expenses,
-    };
-  }, [dailyTotals]);
 
   return (
     <Stack gap="xl">
@@ -191,34 +202,43 @@ const CalendarPage = () => {
         title={selectedDate ? `${selectedDate} の仕訳一覧` : '仕訳一覧'}
         size="lg"
       >
-        {selectedDateEntries.length > 0 ? (
-          <Table>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>借方</Table.Th>
-                <Table.Th>貸方</Table.Th>
-                <Table.Th style={{ textAlign: 'right' }}>金額</Table.Th>
-                <Table.Th>摘要</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {selectedDateEntries.map((entry) => (
-                <Table.Tr key={entry.id}>
-                  <Table.Td>{entry.debit_account_name}</Table.Td>
-                  <Table.Td>{entry.credit_account_name}</Table.Td>
-                  <Table.Td style={{ textAlign: 'right' }}>
-                    {entry.amount.toLocaleString()}
-                  </Table.Td>
-                  <Table.Td>{entry.description}</Table.Td>
+        <Stack gap="md">
+          {selectedDateEntries.length > 0 ? (
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>借方</Table.Th>
+                  <Table.Th>貸方</Table.Th>
+                  <Table.Th style={{ textAlign: 'right' }}>金額</Table.Th>
+                  <Table.Th>摘要</Table.Th>
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        ) : (
-          <Text c="dimmed" ta="center" py="xl">
-            この日の仕訳はありません
-          </Text>
-        )}
+              </Table.Thead>
+              <Table.Tbody>
+                {selectedDateEntries.map((entry) => (
+                  <Table.Tr key={entry.id}>
+                    <Table.Td>{entry.debit_account_name}</Table.Td>
+                    <Table.Td>{entry.credit_account_name}</Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>
+                      {entry.amount.toLocaleString()}
+                    </Table.Td>
+                    <Table.Td>{entry.description}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          ) : (
+            <Text c="dimmed" ta="center" py="xl">
+              この日の仕訳はありません
+            </Text>
+          )}
+          <Button
+            leftSection={<IconChartPie size={16} />}
+            variant="light"
+            onClick={handleGoToDashboard}
+          >
+            この月をダッシュボードで表示
+          </Button>
+        </Stack>
       </Modal>
     </Stack>
   );

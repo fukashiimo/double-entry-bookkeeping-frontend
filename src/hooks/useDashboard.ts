@@ -7,6 +7,13 @@ const supabaseUrl = 'https://iivyylojvqgucmbyfrqw.supabase.co'
 export interface DashboardData {
   year: number
   month: number
+  period?: {
+    mode: 'single' | 'range' | 'annual'
+    startMonth: number
+    endMonth: number
+    startDate: string
+    endDate: string
+  }
   accounts: {
     assets: Array<{ id: number; name: string; type: string; created_at: string; updated_at: string }>
     liabilities: Array<{ id: number; name: string; type: string; created_at: string; updated_at: string }>
@@ -38,13 +45,19 @@ export interface DashboardData {
     expenses: number
   }>
   balanceSheet: {
-    assets: Array<{ name: string; amount: number }>
-    liabilities: Array<{ name: string; amount: number }>
-    equity: Array<{ name: string; amount: number }>
+    assets: Array<{ name: string; amount: number; subaccounts?: Array<{ name: string; amount: number }> }>
+    liabilities: Array<{ name: string; amount: number; subaccounts?: Array<{ name: string; amount: number }> }>
+    equity: Array<{ name: string; amount: number; subaccounts?: Array<{ name: string; amount: number }> }>
   }
 }
 
-export const useDashboard = (year?: number, month?: number) => {
+export interface DashboardQueryOptions {
+  periodMode?: 'single' | 'range' | 'annual'
+  startMonth?: number
+  endMonth?: number
+}
+
+export const useDashboard = (year?: number, month?: number, options?: DashboardQueryOptions) => {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -58,6 +71,9 @@ export const useDashboard = (year?: number, month?: number) => {
       const now = new Date()
       const currentYear = year || now.getFullYear()
       const currentMonth = month || now.getMonth() + 1
+      const periodMode = options?.periodMode ?? 'single'
+      const startMonth = options?.startMonth ?? currentMonth
+      const endMonth = options?.endMonth ?? currentMonth
 
       console.log('Fetching dashboard data for:', currentYear, currentMonth)
 
@@ -72,7 +88,7 @@ export const useDashboard = (year?: number, month?: number) => {
 
       // ダッシュボード専用APIを使用（ユーザーのアクセストークンで呼び出し）
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/dashboard?year=${currentYear}&month=${currentMonth}`,
+        `${supabaseUrl}/functions/v1/dashboard?year=${currentYear}&month=${currentMonth}&periodMode=${periodMode}&startMonth=${startMonth}&endMonth=${endMonth}`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -98,7 +114,7 @@ export const useDashboard = (year?: number, month?: number) => {
 
   useEffect(() => {
     fetchDashboardData()
-  }, [year, month])
+  }, [year, month, options?.periodMode, options?.startMonth, options?.endMonth])
 
   return {
     data,

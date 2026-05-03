@@ -10,23 +10,24 @@ import {
   Select,
   TextInput,
   Box,
-  Menu,
   Alert,
   Loader,
   Center,
   Text,
   useMantineTheme,
   useMantineColorScheme,
+  SegmentedControl,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
   IconPlus,
   IconEdit,
   IconTrash,
-  IconDots,
   IconAlertCircle,
   IconCheck,
   IconX,
+  IconChevronUp,
+  IconChevronDown,
 } from '@tabler/icons-react';
 import { useAccounts } from '../hooks/useAccounts';
 import { useSubaccounts } from '../hooks/useSubaccounts';
@@ -55,8 +56,9 @@ export default function AccountSettings() {
   const [opened, { open, close }] = useDisclosure(false);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [accountName, setAccountName] = useState('');
-  const [editingAccount, setEditingAccount] = useState<{ id: number; name: string; type: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // 表示切り替え: 'balance' = 貸借対照表（資産・負債・純資産）, 'income' = 損益計算書（収益・費用）
+  const [viewMode, setViewMode] = useState<'balance' | 'income'>('balance');
 
   // Subaccount management state
   const [subModalOpen, setSubModalOpen] = useState(false);
@@ -74,6 +76,14 @@ export default function AccountSettings() {
   // 補助科目のキャッシュ（勘定科目ID → 補助科目リスト）
   const [subaccountsCache, setSubaccountsCache] = useState<Record<number, { id: number; name: string }[]>>({});
   const [loadingSubaccounts, setLoadingSubaccounts] = useState<Record<number, boolean>>({});
+  const [accountOrder, setAccountOrder] = useState<Record<string, number[]>>(() => {
+    try {
+      const saved = localStorage.getItem('account-order');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
 
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
@@ -111,6 +121,54 @@ export default function AccountSettings() {
       loadSubaccounts(account.id);
     });
   }, [accounts]);
+
+  // 勘定科目の並び順を初期化/同期
+  useEffect(() => {
+    if (!accounts) return;
+    setAccountOrder((prev) => {
+      const next: Record<string, number[]> = { ...prev };
+      (Object.keys(accounts) as Array<keyof typeof accounts>).forEach((type) => {
+        const ids = accounts[type].map((account) => account.id);
+        const current = (prev[type] || []).filter((id) => ids.includes(id));
+        const missing = ids.filter((id) => !current.includes(id));
+        next[type] = [...current, ...missing];
+      });
+      return next;
+    });
+  }, [accounts]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('account-order', JSON.stringify(accountOrder));
+    } catch {
+      // ignore
+    }
+  }, [accountOrder]);
+
+  const openSubaccountManager = async (account: { id: number; name: string }) => {
+    setSubTargetAccount({ id: account.id, name: account.name });
+    setSubModalOpen(true);
+    setSubEditingId(null);
+    setSubName('');
+    try {
+      const list = await fetchSubaccounts(account.id);
+      setSubList(list.map(s => ({ id: s.id, name: s.name })));
+    } catch {
+      setSubList([]);
+    }
+  };
+
+  const moveAccountOrder = (type: string, accountId: number, direction: 'up' | 'down') => {
+    setAccountOrder((prev) => {
+      const list = [...(prev[type] || [])];
+      const idx = list.indexOf(accountId);
+      if (idx === -1) return prev;
+      const target = direction === 'up' ? idx - 1 : idx + 1;
+      if (target < 0 || target >= list.length) return prev;
+      [list[idx], list[target]] = [list[target], list[idx]];
+      return { ...prev, [type]: list };
+    });
+  };
 
   // インライン編集を開始
   const startInlineEdit = (account: { id: number; name: string; type: string }) => {
@@ -160,29 +218,6 @@ export default function AccountSettings() {
     }
   };
 
-  const handleEditAccount = (account: { id: number; name: string; type: string }) => {
-    setSelectedType(account.type);
-    setAccountName(account.name);
-    setEditingAccount(account);
-    open();
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingAccount || !accountName.trim()) return;
-
-    try {
-      setIsSubmitting(true);
-      await updateAccount(editingAccount.id, accountName, selectedType as any);
-      setEditingAccount(null);
-      setAccountName('');
-      close();
-    } catch (err) {
-      console.error('Error updating account:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleDeleteAccount = async (id: number) => {
     if (!confirm('この勘定科目を削除しますか？')) return;
 
@@ -195,7 +230,6 @@ export default function AccountSettings() {
 
   const handleCloseModal = () => {
     close();
-    setEditingAccount(null);
     setSelectedType(null);
     setAccountName('');
   };
@@ -224,20 +258,38 @@ export default function AccountSettings() {
     );
   }
 
+  // 表示モードに応じて表示する勘定科目タイプをフィルタリング
+  const filteredAccountTypes = viewMode === 'balance'
+    ? ['assets', 'liabilities', 'equity']
+    : ['revenue', 'expenses'];
+
   return (
     <Stack gap="md">
       <Group justify="space-between">
         <Title order={2}>勘定科目設定</Title>
-        <Button leftSection={<IconPlus size={16} />} onClick={open}>
-          追加する
-        </Button>
+        <Group gap="sm">
+          <SegmentedControl
+            value={viewMode}
+            onChange={(value) => setViewMode(value as 'balance' | 'income')}
+            data={[
+              { label: '貸借対照表', value: 'balance' },
+              { label: '損益計算書', value: 'income' },
+            ]}
+            size="sm"
+          />
+          <Button leftSection={<IconPlus size={16} />} onClick={open}>
+            追加する
+          </Button>
+        </Group>
       </Group>
 
       <Paper shadow="xs" p="md" radius="md">
-        {Object.entries(accounts).map(([type, accountList]) => (
-          <Box key={type} mb="lg">
-            <Title order={4} mb="sm">{ACCOUNT_TYPE_LABELS[type as keyof typeof ACCOUNT_TYPE_LABELS] || type}</Title>
-            <Stack gap="xs">
+        {Object.entries(accounts)
+          .filter(([type]) => filteredAccountTypes.includes(type))
+          .map(([type, accountList]) => (
+          <Box key={type} mb="md">
+            <Title order={5} mb="xs">{ACCOUNT_TYPE_LABELS[type as keyof typeof ACCOUNT_TYPE_LABELS] || type}</Title>
+            <Stack gap={4}>
               {accountList.length === 0 ? (
                 <Box p="md" style={{
                   backgroundColor: surfaceBg,
@@ -249,7 +301,12 @@ export default function AccountSettings() {
                   勘定科目がありません
                 </Box>
               ) : (
-                accountList.map((account: any) => (
+                [...accountList]
+                  .sort((a: any, b: any) => {
+                    const order = accountOrder[type] || [];
+                    return order.indexOf(a.id) - order.indexOf(b.id);
+                  })
+                  .map((account: any, index: number, sortedList: any[]) => (
                   <Box key={account.id}>
                     {/* 勘定科目 */}
                     <Group justify="space-between" p="xs" style={{
@@ -315,41 +372,43 @@ export default function AccountSettings() {
                           {account.name}
                         </span>
                       )}
-                      <Menu position="bottom-start">
-                        <Menu.Target>
-                          <ActionIcon size="sm" variant="subtle">
-                            <IconDots size={16} />
-                          </ActionIcon>
-                        </Menu.Target>
-                        <Menu.Dropdown>
-                          <Menu.Item
-                            leftSection={<IconEdit size={16} />}
-                            onClick={() => handleEditAccount(account)}
-                          >
-                            編集（モーダル）
-                          </Menu.Item>
-                          <Menu.Item
-                            leftSection={<IconPlus size={16} />}
-                            onClick={async () => {
-                              setSubTargetAccount({ id: account.id, name: account.name });
-                              setSubModalOpen(true);
-                              setSubEditingId(null);
-                              setSubName('');
-                              try {
-                                const list = await fetchSubaccounts(account.id);
-                                setSubList(list.map(s => ({ id: s.id, name: s.name })));
-                              } catch (e) {
-                                setSubList([]);
-                              }
-                            }}
-                          >
-                            補助科目を管理
-                          </Menu.Item>
-                          <Menu.Item leftSection={<IconTrash size={16} />} color="red" onClick={() => handleDeleteAccount(account.id)}>
-                            削除
-                          </Menu.Item>
-                        </Menu.Dropdown>
-                      </Menu>
+                      <Group gap="xs">
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          onClick={() => moveAccountOrder(type, account.id, 'up')}
+                          disabled={index === 0}
+                          title="上へ移動"
+                        >
+                          <IconChevronUp size={16} />
+                        </ActionIcon>
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          onClick={() => moveAccountOrder(type, account.id, 'down')}
+                          disabled={index === sortedList.length - 1}
+                          title="下へ移動"
+                        >
+                          <IconChevronDown size={16} />
+                        </ActionIcon>
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          onClick={() => openSubaccountManager(account)}
+                          title="補助科目を管理"
+                        >
+                          <IconPlus size={16} />
+                        </ActionIcon>
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          color="red"
+                          onClick={() => handleDeleteAccount(account.id)}
+                          title="削除"
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Group>
                     </Group>
 
                     {/* 補助科目をインデント表示 */}
@@ -387,11 +446,11 @@ export default function AccountSettings() {
         ))}
       </Paper>
 
-      {/* 追加・編集モーダル */}
+      {/* 追加モーダル */}
       <Modal
         opened={opened}
         onClose={handleCloseModal}
-        title={editingAccount ? "勘定科目の編集" : "勘定科目の追加"}
+        title="勘定科目の追加"
         size="lg"
         centered
         zIndex={2000}
@@ -427,11 +486,11 @@ export default function AccountSettings() {
             <Button variant="light" onClick={handleCloseModal} disabled={isSubmitting}>
               キャンセル
             </Button>
-            <Button 
-              onClick={editingAccount ? handleSaveEdit : handleAddAccount}
+            <Button
+              onClick={handleAddAccount}
               loading={isSubmitting}
             >
-              {editingAccount ? "保存" : "追加"}
+              追加
             </Button>
           </Group>
         </Stack>
