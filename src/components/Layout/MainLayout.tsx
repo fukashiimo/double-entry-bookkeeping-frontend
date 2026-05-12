@@ -12,7 +12,6 @@ import {
   IconSun,
   IconMoon,
   IconCalendarStats,
-  IconCreditCard,
 } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -22,7 +21,6 @@ const mainLinks = [
   { icon: IconPlus, label: '仕訳入力', path: '/journal-entry' },
   { icon: IconCalendarStats, label: 'カレンダー', path: '/calendar' },
   { icon: IconList, label: '勘定科目設定', path: '/account-settings' },
-  { icon: IconCreditCard, label: '料金プラン', path: '/pricing' },
   { icon: IconSettings, label: '設定', path: '/settings' },
   { icon: IconUser, label: 'マイページ', path: '/mypage' },
 ];
