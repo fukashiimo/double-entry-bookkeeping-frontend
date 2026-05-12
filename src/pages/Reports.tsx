@@ -36,11 +36,9 @@ import {
 import { PieChart } from '@mantine/charts';
 import { useDashboard } from '../hooks/useDashboard';
 import { useJournalEntries } from '../hooks/useJournalEntries';
-import { useEntitlements } from '../hooks/useEntitlements';
 
 export default function Reports() {
   const currentYear = new Date().getFullYear();
-  const { isPro } = useEntitlements();
   const [searchParams] = useSearchParams();
   const urlYear = searchParams.get('year');
   const urlMonth = searchParams.get('month');
@@ -80,12 +78,6 @@ export default function Reports() {
     }
   }, [journalEntries, isInitialized]);
 
-  useEffect(() => {
-    if (!isPro && selectedYear !== currentYear) {
-      setSelectedYear(currentYear);
-    }
-  }, [isPro, selectedYear, currentYear]);
-
   const dashboardOptions = useMemo(() => ({
     periodMode,
     startMonth,
@@ -94,18 +86,15 @@ export default function Reports() {
 
   const { data, loading, error } = useDashboard(selectedYear, selectedMonth, dashboardOptions);
 
-  // 年選択用のオプション
+  // 年選択用のオプション（無料版でも全期間閲覧可能）
   const yearOptions = useMemo(() => {
-    if (!isPro) {
-      return [{ value: String(currentYear), label: `${currentYear}年` }];
-    }
     return [
       { value: String(currentYear - 2), label: `${currentYear - 2}年` },
       { value: String(currentYear - 1), label: `${currentYear - 1}年` },
       { value: String(currentYear), label: `${currentYear}年` },
       { value: String(currentYear + 1), label: `${currentYear + 1}年` },
     ];
-  }, [isPro, currentYear]);
+  }, [currentYear]);
 
   // 貸借対照表データ（0円フィルター適用）- hooks は条件分岐の前に配置
   const filteredAssets = useMemo(() => {
@@ -156,9 +145,13 @@ export default function Reports() {
   const totalAssets = data?.balanceSheet?.assets?.reduce((sum, item) => sum + item.amount, 0) || 0;
   const totalLiabilities = data?.balanceSheet?.liabilities?.reduce((sum, item) => sum + item.amount, 0) || 0;
   const totalEquity = data?.balanceSheet?.equity?.reduce((sum, item) => sum + item.amount, 0) || 0;
-  const totalAssetsDisplay = Math.abs(totalAssets);
-  const totalLiabilitiesDisplay = Math.abs(totalLiabilities);
-  const totalEquityDisplay = Math.abs(totalEquity);
+  const totalAssetsDisplay = totalAssets;
+  const totalLiabilitiesDisplay = totalLiabilities;
+  const totalEquityDisplay = totalEquity;
+
+  // マイナス残高を△表記で表示（日本の会計慣行）
+  const formatAmount = (amount: number) =>
+    amount < 0 ? `△${Math.abs(amount).toLocaleString()}` : amount.toLocaleString();
   const totalRevenue = data?.summary?.totalRevenue || 0;
   const totalExpenses = data?.summary?.totalExpenses || 0;
   const netIncome = data?.summary?.netIncome || 0;
@@ -208,19 +201,13 @@ export default function Reports() {
 
       {/* 年・月選択 */}
       <Paper p="md" radius="md" withBorder>
-        {!isPro && (
-          <Alert color="blue" variant="light" mb="md">
-            全期間の閲覧はProプランで利用できます。Freeプランでは当年データのみ表示されます。
-          </Alert>
-        )}
-        <Group justify="space-between" mb="md">
+          <Group justify="space-between" mb="md">
           <Group gap="xs">
             <Button
               variant="subtle"
               size="compact-sm"
               leftSection={<IconChevronLeft size={14} />}
               onClick={() => setSelectedYear(y => y - 1)}
-              disabled={!isPro}
             >
               前年
             </Button>
@@ -230,14 +217,12 @@ export default function Reports() {
               data={yearOptions}
               style={{ width: 110 }}
               size="sm"
-              disabled={!isPro}
             />
             <Button
               variant="subtle"
               size="compact-sm"
               rightSection={<IconChevronRight size={14} />}
               onClick={() => setSelectedYear(y => y + 1)}
-              disabled={!isPro}
             >
               翌年
             </Button>
@@ -392,7 +377,7 @@ export default function Reports() {
                 <Group justify="space-between">
                   <div>
                     <Text size="xs" c="dimmed" tt="uppercase" fw={700}>総資産</Text>
-                    <Text size="xl" fw={700}>¥{totalAssetsDisplay.toLocaleString()}</Text>
+                    <Text size="xl" fw={700} c={totalAssetsDisplay < 0 ? 'red' : undefined}>¥{formatAmount(totalAssetsDisplay)}</Text>
                   </div>
                   <ThemeIcon color="blue" size="xl" radius="md">
                     <IconWallet size={24} />
@@ -405,7 +390,7 @@ export default function Reports() {
                 <Group justify="space-between">
                   <div>
                     <Text size="xs" c="dimmed" tt="uppercase" fw={700}>総負債</Text>
-                    <Text size="xl" fw={700}>¥{totalLiabilitiesDisplay.toLocaleString()}</Text>
+                    <Text size="xl" fw={700} c={totalLiabilitiesDisplay < 0 ? 'red' : undefined}>¥{formatAmount(totalLiabilitiesDisplay)}</Text>
                   </div>
                   <ThemeIcon color="red" size="xl" radius="md">
                     <IconBuildingBank size={24} />
@@ -418,7 +403,7 @@ export default function Reports() {
                 <Group justify="space-between">
                   <div>
                     <Text size="xs" c="dimmed" tt="uppercase" fw={700}>純資産</Text>
-                    <Text size="xl" fw={700}>¥{totalEquityDisplay.toLocaleString()}</Text>
+                    <Text size="xl" fw={700} c={totalEquityDisplay < 0 ? 'red' : undefined}>¥{formatAmount(totalEquityDisplay)}</Text>
                   </div>
                   <ThemeIcon color="green" size="xl" radius="md">
                     <IconPigMoney size={24} />
@@ -588,7 +573,7 @@ export default function Reports() {
                               <Text>{item.name}</Text>
                             </Group>
                           </Table.Td>
-                          <Table.Td style={{ textAlign: 'right' }}>¥{Math.abs(item.amount).toLocaleString()}</Table.Td>
+                          <Table.Td style={{ textAlign: 'right' }}>¥{formatAmount(item.amount)}</Table.Td>
                         </Table.Tr>
                       ];
 
@@ -600,7 +585,7 @@ export default function Reports() {
                                 └ {sub.name}
                               </Table.Td>
                               <Table.Td style={{ textAlign: 'right', color: 'var(--mantine-color-dimmed)' }}>
-                                ¥{Math.abs(sub.amount).toLocaleString()}
+                                ¥{formatAmount(sub.amount)}
                               </Table.Td>
                             </Table.Tr>
                           );
@@ -616,7 +601,7 @@ export default function Reports() {
               <Box mt="auto" pt="md" style={{ borderTop: '2px solid var(--mantine-color-default-border)' }}>
                 <Group justify="space-between">
                   <Text fw={700}>資産合計</Text>
-                  <Text fw={700}>¥{totalAssetsDisplay.toLocaleString()}</Text>
+                  <Text fw={700}>¥{formatAmount(totalAssetsDisplay)}</Text>
                 </Group>
               </Box>
             </Paper>
@@ -660,7 +645,7 @@ export default function Reports() {
                               <Text>{item.name}</Text>
                             </Group>
                           </Table.Td>
-                          <Table.Td style={{ textAlign: 'right' }}>¥{Math.abs(item.amount).toLocaleString()}</Table.Td>
+                          <Table.Td style={{ textAlign: 'right' }}>¥{formatAmount(item.amount)}</Table.Td>
                         </Table.Tr>
                       ];
 
@@ -672,7 +657,7 @@ export default function Reports() {
                                 └ {sub.name}
                               </Table.Td>
                               <Table.Td style={{ textAlign: 'right', color: 'var(--mantine-color-dimmed)' }}>
-                                ¥{Math.abs(sub.amount).toLocaleString()}
+                                ¥{formatAmount(sub.amount)}
                               </Table.Td>
                             </Table.Tr>
                           );
@@ -684,7 +669,7 @@ export default function Reports() {
                   </Table.Tbody>
                 </Table>
                 <Group justify="flex-end" mt="xs">
-                  <Text size="sm" c="dimmed">負債小計: ¥{totalLiabilitiesDisplay.toLocaleString()}</Text>
+                  <Text size="sm" c="dimmed">負債小計: ¥{formatAmount(totalLiabilitiesDisplay)}</Text>
                 </Group>
 
                 <Divider my="md" />
@@ -725,7 +710,7 @@ export default function Reports() {
                               <Text>{item.name}</Text>
                             </Group>
                           </Table.Td>
-                          <Table.Td style={{ textAlign: 'right' }}>¥{Math.abs(item.amount).toLocaleString()}</Table.Td>
+                          <Table.Td style={{ textAlign: 'right' }}>¥{formatAmount(item.amount)}</Table.Td>
                         </Table.Tr>
                       ];
 
@@ -737,7 +722,7 @@ export default function Reports() {
                                 └ {sub.name}
                               </Table.Td>
                               <Table.Td style={{ textAlign: 'right', color: 'var(--mantine-color-dimmed)' }}>
-                                ¥{Math.abs(sub.amount).toLocaleString()}
+                                ¥{formatAmount(sub.amount)}
                               </Table.Td>
                             </Table.Tr>
                           );
@@ -749,14 +734,14 @@ export default function Reports() {
                   </Table.Tbody>
                 </Table>
                 <Group justify="flex-end" mt="xs">
-                  <Text size="sm" c="dimmed">純資産小計: ¥{totalEquityDisplay.toLocaleString()}</Text>
+                  <Text size="sm" c="dimmed">純資産小計: ¥{formatAmount(totalEquityDisplay)}</Text>
                 </Group>
               </Box>
               {/* 負債・純資産合計を下部に固定 */}
               <Box mt="auto" pt="md" style={{ borderTop: '2px solid var(--mantine-color-default-border)' }}>
                 <Group justify="space-between">
                   <Text fw={700}>負債・純資産合計</Text>
-                  <Text fw={700}>¥{(totalLiabilitiesDisplay + totalEquityDisplay).toLocaleString()}</Text>
+                  <Text fw={700}>¥{formatAmount(totalLiabilitiesDisplay + totalEquityDisplay)}</Text>
                 </Group>
               </Box>
             </Paper>

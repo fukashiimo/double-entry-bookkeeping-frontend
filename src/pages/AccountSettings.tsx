@@ -31,6 +31,7 @@ import {
 } from '@tabler/icons-react';
 import { useAccounts } from '../hooks/useAccounts';
 import { useSubaccounts } from '../hooks/useSubaccounts';
+import { useEntitlements } from '../hooks/useEntitlements';
 
 // 勘定科目の種類の定義
 const ACCOUNT_TYPES = {
@@ -51,6 +52,7 @@ const ACCOUNT_TYPE_LABELS = {
 } as const;
 
 export default function AccountSettings() {
+  const { isPro } = useEntitlements();
   const { accounts, loading, error, createAccount, updateAccount, deleteAccount } = useAccounts();
   const { fetchSubaccounts, createSubaccount, updateSubaccount, deleteSubaccount } = useSubaccounts();
   const [opened, { open, close }] = useDisclosure(false);
@@ -391,14 +393,16 @@ export default function AccountSettings() {
                         >
                           <IconChevronDown size={16} />
                         </ActionIcon>
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          onClick={() => openSubaccountManager(account)}
-                          title="補助科目を管理"
-                        >
-                          <IconPlus size={16} />
-                        </ActionIcon>
+                        {isPro && (
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            onClick={() => openSubaccountManager(account)}
+                            title="補助科目を管理"
+                          >
+                            <IconPlus size={16} />
+                          </ActionIcon>
+                        )}
                         <ActionIcon
                           size="sm"
                           variant="subtle"
@@ -411,8 +415,8 @@ export default function AccountSettings() {
                       </Group>
                     </Group>
 
-                    {/* 補助科目をインデント表示 */}
-                    {subaccountsCache[account.id] && subaccountsCache[account.id].length > 0 && (
+                    {/* 補助科目をインデント表示（Pro版のみ） */}
+                    {isPro && subaccountsCache[account.id] && subaccountsCache[account.id].length > 0 && (
                       <Stack gap={4} ml="xl" mt={4}>
                         {subaccountsCache[account.id].map((sub) => (
                           <Group
@@ -433,7 +437,7 @@ export default function AccountSettings() {
                         ))}
                       </Stack>
                     )}
-                    {loadingSubaccounts[account.id] && (
+                    {isPro && loadingSubaccounts[account.id] && (
                       <Box ml="xl" mt={4} pl="md">
                         <Loader size="xs" />
                       </Box>
