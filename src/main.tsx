@@ -8,7 +8,7 @@ import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ColorSchemeScript defaultColorScheme="auto" localStorageKey="color-scheme" />
+    <ColorSchemeScript defaultColorScheme="light" localStorageKey="color-scheme" />
     <App />
   </StrictMode>,
 )

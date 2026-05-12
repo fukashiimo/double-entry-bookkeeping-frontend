@@ -104,9 +104,9 @@ function ThemedApp() {
   });
 
   return (
-    <MantineProvider 
-      theme={dynamicTheme} 
-      defaultColorScheme="auto"
+    <MantineProvider
+      theme={dynamicTheme}
+      defaultColorScheme="light"
       colorSchemeManager={localStorageColorSchemeManager({ key: 'color-scheme' })}
     >
       <AppContent />
