@@ -12,11 +12,11 @@ import {
   Box,
   Alert,
   Loader,
-  Center,
   Text,
   useMantineTheme,
   useMantineColorScheme,
   SegmentedControl,
+  Skeleton,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -238,9 +238,22 @@ export default function AccountSettings() {
 
   if (loading) {
     return (
-      <Center h={400}>
-        <Loader size="lg" />
-      </Center>
+      <Stack gap="md">
+        <Group justify="space-between">
+          <Title order={2}>勘定科目設定</Title>
+          <Group gap="sm">
+            <Skeleton height={32} width={160} radius="sm" />
+            <Skeleton height={32} width={96} radius="sm" />
+          </Group>
+        </Group>
+        <Paper shadow="xs" p="md" radius="md">
+          <Stack gap="md">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} height={36} radius="sm" />
+            ))}
+          </Stack>
+        </Paper>
+      </Stack>
     );
   }
 

@@ -13,10 +13,9 @@ import {
   Text,
   Select,
   Grid,
-  Loader,
   Alert,
   UnstyledButton,
-  Center
+  Skeleton
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import {
@@ -66,9 +65,7 @@ function Th({ children, sorted, reversed, onSort, width, textAlign = 'left' }: T
     <Table.Th style={{ width, textAlign }}>
       <UnstyledButton onClick={onSort} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <span>{children}</span>
-        <Center>
-          <Icon size={14} stroke={1.5} style={{ opacity: sorted ? 1 : 0.5 }} />
-        </Center>
+        <Icon size={14} stroke={1.5} style={{ opacity: sorted ? 1 : 0.5 }} />
       </UnstyledButton>
     </Table.Th>
   );
@@ -160,14 +157,7 @@ export default function JournalList({ onEdit }: JournalListProps) {
     setPage(1); // ソート変更時はページを1に戻す
   };
 
-  // ローディング状態の処理（初回取得時のみ表示）
-  if ((entriesLoading && journalEntries.length === 0) || (accountsLoading && !accounts)) {
-    return (
-      <Stack align="center" justify="center" h="50vh">
-        <Loader size="lg" />
-      </Stack>
-    );
-  }
+  const isLoading = (entriesLoading && journalEntries.length === 0) || (accountsLoading && !accounts);
 
   // エラー状態の処理
   if (entriesError || accountsError) {
@@ -367,7 +357,15 @@ export default function JournalList({ onEdit }: JournalListProps) {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {filteredData.map((item) => (
+            {isLoading
+              ? [...Array(8)].map((_, i) => (
+                  <Table.Tr key={i}>
+                    {[...Array(7)].map((_, j) => (
+                      <Table.Td key={j}><Skeleton height={16} radius="sm" /></Table.Td>
+                    ))}
+                  </Table.Tr>
+                ))
+              : filteredData.map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{new Date(item.date).toLocaleDateString('ja-JP')}</Table.Td>
                 <Table.Td style={{ fontWeight: 500 }}>
@@ -419,7 +417,7 @@ export default function JournalList({ onEdit }: JournalListProps) {
                 </Table.Td>
               </Table.Tr>
             ))}
-          </Table.Tbody>
+            </Table.Tbody>
         </Table>
 
         {/* ページネーションと概要 */}

@@ -9,7 +9,6 @@ import {
   Group,
   SegmentedControl,
   Table,
-  Loader,
   Alert,
   Card,
   ThemeIcon,
@@ -19,7 +18,8 @@ import {
   SimpleGrid,
   Switch,
   Select,
-  Box
+  Box,
+  Skeleton,
 } from '@mantine/core';
 import {
   IconAlertCircle,
@@ -125,14 +125,6 @@ export default function Reports() {
 
   // ツールチップフォーマット関数
   const tooltipFormatter = (value: number) => `¥${value.toLocaleString()}`;
-
-  if (loading && !data) {
-    return (
-      <Stack align="center" justify="center" h="50vh">
-        <Loader size="lg" />
-      </Stack>
-    );
-  }
 
   if (error) {
     return (
@@ -377,7 +369,9 @@ export default function Reports() {
                 <Group justify="space-between">
                   <div>
                     <Text size="xs" c="dimmed" tt="uppercase" fw={700}>総資産</Text>
-                    <Text size="xl" fw={700} c={totalAssetsDisplay < 0 ? 'red' : undefined}>¥{formatAmount(totalAssetsDisplay)}</Text>
+                    <Skeleton visible={loading} radius="sm">
+                      <Text size="xl" fw={700} c={totalAssetsDisplay < 0 ? 'red' : undefined}>¥{formatAmount(totalAssetsDisplay)}</Text>
+                    </Skeleton>
                   </div>
                   <ThemeIcon color="blue" size="xl" radius="md">
                     <IconWallet size={24} />
@@ -390,7 +384,9 @@ export default function Reports() {
                 <Group justify="space-between">
                   <div>
                     <Text size="xs" c="dimmed" tt="uppercase" fw={700}>総負債</Text>
-                    <Text size="xl" fw={700} c={totalLiabilitiesDisplay < 0 ? 'red' : undefined}>¥{formatAmount(totalLiabilitiesDisplay)}</Text>
+                    <Skeleton visible={loading} radius="sm">
+                      <Text size="xl" fw={700} c={totalLiabilitiesDisplay < 0 ? 'red' : undefined}>¥{formatAmount(totalLiabilitiesDisplay)}</Text>
+                    </Skeleton>
                   </div>
                   <ThemeIcon color="red" size="xl" radius="md">
                     <IconBuildingBank size={24} />
@@ -403,7 +399,9 @@ export default function Reports() {
                 <Group justify="space-between">
                   <div>
                     <Text size="xs" c="dimmed" tt="uppercase" fw={700}>純資産</Text>
-                    <Text size="xl" fw={700} c={totalEquityDisplay < 0 ? 'red' : undefined}>¥{formatAmount(totalEquityDisplay)}</Text>
+                    <Skeleton visible={loading} radius="sm">
+                      <Text size="xl" fw={700} c={totalEquityDisplay < 0 ? 'red' : undefined}>¥{formatAmount(totalEquityDisplay)}</Text>
+                    </Skeleton>
                   </div>
                   <ThemeIcon color="green" size="xl" radius="md">
                     <IconPigMoney size={24} />
@@ -418,9 +416,11 @@ export default function Reports() {
                     <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
                       {periodMode === 'single' ? '当月収支' : '期間収支'}
                     </Text>
-                    <Text size="xl" fw={700} c={netIncome >= 0 ? 'green' : 'red'}>
-                      ¥{netIncome.toLocaleString()}
-                    </Text>
+                    <Skeleton visible={loading} radius="sm">
+                      <Text size="xl" fw={700} c={netIncome >= 0 ? 'green' : 'red'}>
+                        ¥{netIncome.toLocaleString()}
+                      </Text>
+                    </Skeleton>
                   </div>
                   <ThemeIcon color={netIncome >= 0 ? 'green' : 'red'} size="xl" radius="md">
                     {netIncome >= 0 ? <IconTrendingUp size={24} /> : <IconTrendingDown size={24} />}
@@ -435,7 +435,9 @@ export default function Reports() {
             <Grid.Col span={{ base: 12, md: 6 }}>
               <Paper p="md" radius="md" withBorder style={{ overflow: 'visible' }}>
                 <Title order={4} mb="md">収入内訳</Title>
-                {revenueChartData.length > 0 ? (
+                {loading ? (
+                  <Skeleton height={280} radius="md" />
+                ) : revenueChartData.length > 0 ? (
                   <div style={{ padding: '20px 30px 20px 20px' }}>
                     <PieChart
                       data={revenueChartData}
@@ -457,7 +459,9 @@ export default function Reports() {
             <Grid.Col span={{ base: 12, md: 6 }}>
               <Paper p="md" radius="md" withBorder style={{ overflow: 'visible' }}>
                 <Title order={4} mb="md">支出内訳</Title>
-                {expenseChartData.length > 0 ? (
+                {loading ? (
+                  <Skeleton height={280} radius="md" />
+                ) : expenseChartData.length > 0 ? (
                   <div style={{ padding: '20px 30px 20px 20px' }}>
                     <PieChart
                       data={expenseChartData}
@@ -483,7 +487,9 @@ export default function Reports() {
             <Grid.Col span={{ base: 12, md: 6 }}>
               <Paper p="md" radius="md" withBorder>
                 <Title order={4} mb="md">収入トップ5</Title>
-                {revenueChartData.length > 0 ? (
+                {loading ? (
+                  <Stack gap="sm">{[...Array(3)].map((_, i) => <Skeleton key={i} height={24} radius="sm" />)}</Stack>
+                ) : revenueChartData.length > 0 ? (
                   <Stack gap="sm">
                     {[...revenueChartData]
                       .sort((a, b) => b.value - a.value)
@@ -507,7 +513,9 @@ export default function Reports() {
             <Grid.Col span={{ base: 12, md: 6 }}>
               <Paper p="md" radius="md" withBorder>
                 <Title order={4} mb="md">支出トップ5</Title>
-                {expenseChartData.length > 0 ? (
+                {loading ? (
+                  <Stack gap="sm">{[...Array(3)].map((_, i) => <Skeleton key={i} height={24} radius="sm" />)}</Stack>
+                ) : expenseChartData.length > 0 ? (
                   <Stack gap="sm">
                     {[...expenseChartData]
                       .sort((a, b) => b.value - a.value)
