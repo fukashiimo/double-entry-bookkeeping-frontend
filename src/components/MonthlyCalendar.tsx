@@ -13,6 +13,7 @@ type CalendarCell =
   | {
       key: string
       placeholder: true
+      day: number
     }
   | {
       key: string
@@ -54,10 +55,13 @@ export const MonthlyCalendar = ({ year, month, dailyTotals, onDateClick }: Month
   const startDay = useMemo(() => new Date(year, month - 1, 1).getDay(), [year, month])
   const monthString = month.toString().padStart(2, '0')
 
+  const daysInPrevMonth = useMemo(() => new Date(year, month - 1, 0).getDate(), [year, month])
+
   const cells = useMemo<CalendarCell[]>(() => {
-    const placeholders = Array.from({ length: startDay }, (_, index) => ({
-      key: `empty-${index}`,
+    const prevMonthPlaceholders = Array.from({ length: startDay }, (_, index) => ({
+      key: `prev-${index}`,
       placeholder: true as const,
+      day: daysInPrevMonth - startDay + index + 1,
     }))
 
     const actualDays = Array.from({ length: daysInMonth }, (_, index) => {
@@ -73,8 +77,16 @@ export const MonthlyCalendar = ({ year, month, dailyTotals, onDateClick }: Month
       }
     })
 
-    return [...placeholders, ...actualDays]
-  }, [daysInMonth, monthString, startDay, totalsIndex, year])
+    const totalCells = prevMonthPlaceholders.length + actualDays.length
+    const trailingCount = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7)
+    const nextMonthPlaceholders = Array.from({ length: trailingCount }, (_, index) => ({
+      key: `next-${index}`,
+      placeholder: true as const,
+      day: index + 1,
+    }))
+
+    return [...prevMonthPlaceholders, ...actualDays, ...nextMonthPlaceholders]
+  }, [daysInMonth, daysInPrevMonth, monthString, startDay, totalsIndex, year])
 
   const gap = isMobile ? theme.spacing.xs : theme.spacing.sm
   const cellHeight = isMobile ? 96 : 132
@@ -110,7 +122,24 @@ export const MonthlyCalendar = ({ year, month, dailyTotals, onDateClick }: Month
       >
         {cells.map((cell) => {
           if (cell.placeholder) {
-            return <Box key={cell.key} />
+            return (
+              <Box
+                key={cell.key}
+                style={{
+                  borderRadius: theme.radius.md,
+                  border: `1px solid ${colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[2]}`,
+                  backgroundColor: colorScheme === 'dark' ? theme.colors.dark[8] : theme.colors.gray[0],
+                  padding: isMobile ? theme.spacing.xs : theme.spacing.sm,
+                  height: cellHeight,
+                  overflow: 'hidden',
+                  opacity: 0.5,
+                }}
+              >
+                <Text fw={400} size={isMobile ? 'sm' : 'md'} c="dimmed">
+                  {cell.day}
+                </Text>
+              </Box>
+            )
           }
 
           const { totals, day, key } = cell

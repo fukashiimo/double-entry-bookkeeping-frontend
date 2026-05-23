@@ -13,6 +13,8 @@ export interface Account {
   id: number
   name: string
   type: '資産' | '負債' | '純資産' | '収益' | '費用'
+  sort_order?: number
+  is_system?: boolean
   created_at: string
   updated_at: string
 }

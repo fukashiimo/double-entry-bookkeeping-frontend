@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Table,
   Paper,
-  Title,
   Group,
   Button,
   TextInput,
@@ -15,7 +15,7 @@ import {
   Grid,
   Alert,
   UnstyledButton,
-  Skeleton
+  Loader,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import {
@@ -32,6 +32,7 @@ import {
   IconSelector
 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
+import { notifications } from '@mantine/notifications';
 import { useJournalEntries } from '../hooks/useJournalEntries';
 import { useAccounts } from '../hooks/useAccounts';
 
@@ -73,12 +74,19 @@ function Th({ children, sorted, reversed, onSort, width, textAlign = 'left' }: T
 
 export default function JournalList({ onEdit }: JournalListProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as {
+    startDate?: Date;
+    endDate?: Date;
+    accountFilter?: string;
+  } | null;
+
   const [page, setPage] = useState(1);
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [startDate, setStartDate] = useState<Date | null>(locationState?.startDate ? new Date(locationState.startDate) : null);
+  const [endDate, setEndDate] = useState<Date | null>(locationState?.endDate ? new Date(locationState.endDate) : null);
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [accountFilter, setAccountFilter] = useState<string | null>(null);
-  const [itemsPerPage, setItemsPerPage] = useState<string>('10');
+  const [accountFilter, setAccountFilter] = useState<string | null>(locationState?.accountFilter ?? null);
+  const [itemsPerPage, setItemsPerPage] = useState<string>('20');
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -200,7 +208,7 @@ export default function JournalList({ onEdit }: JournalListProps) {
     try {
       await deleteJournalEntry(id);
     } catch (err) {
-      alert('削除に失敗しました');
+      notifications.show({ title: '削除エラー', message: '仕訳の削除に失敗しました', color: 'red' });
     } finally {
       setDeleting(null);
     }
@@ -220,12 +228,11 @@ export default function JournalList({ onEdit }: JournalListProps) {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between">
-        <Title order={2}>仕訳帳</Title>
-        <Button 
+      <Group justify="flex-end">
+        <Button
           leftSection={<IconPlus size={16} />}
           onClick={() => navigate('/journal-entry')}
-                  >
+        >
           新規仕訳
         </Button>
       </Group>
@@ -291,7 +298,7 @@ export default function JournalList({ onEdit }: JournalListProps) {
             <Select
               label="表示件数"
               data={[
-                { value: '10', label: '10件' },
+                { value: '20', label: '20件' },
                 { value: '50', label: '50件' },
                 { value: '200', label: '200件' },
               ]}
@@ -323,7 +330,7 @@ export default function JournalList({ onEdit }: JournalListProps) {
 
       {/* テーブル部分 */}
       <Paper radius="md" withBorder>
-        <Table striped highlightOnHover>
+        <Table striped highlightOnHover withColumnBorders>
           <Table.Thead>
             <Table.Tr>
               <Th
@@ -335,36 +342,22 @@ export default function JournalList({ onEdit }: JournalListProps) {
                 日付
               </Th>
               <Table.Th style={{ width: '180px' }}>借方勘定科目</Table.Th>
-              <Th
-                sorted={sortField === 'amount'}
-                reversed={sortDirection === 'asc'}
-                onSort={() => handleSort('amount')}
-                width="100px"
-                textAlign="right"
-              >
-                金額
-              </Th>
+              <Table.Th style={{ textAlign: 'right', width: '100px' }}>金額</Table.Th>
               <Table.Th style={{ width: '180px' }}>貸方勘定科目</Table.Th>
               <Table.Th style={{ textAlign: 'right', width: '100px' }}>金額</Table.Th>
-              <Th
-                sorted={sortField === 'description'}
-                reversed={sortDirection === 'asc'}
-                onSort={() => handleSort('description')}
-              >
-                摘要
-              </Th>
+              <Table.Th>摘要</Table.Th>
               <Table.Th style={{ width: '100px' }}></Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {isLoading
-              ? [...Array(8)].map((_, i) => (
-                  <Table.Tr key={i}>
-                    {[...Array(7)].map((_, j) => (
-                      <Table.Td key={j}><Skeleton height={16} radius="sm" /></Table.Td>
-                    ))}
+              ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={7} style={{ textAlign: 'center', padding: '32px' }}>
+                      <Loader size="sm" />
+                    </Table.Td>
                   </Table.Tr>
-                ))
+                )
               : filteredData.map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{new Date(item.date).toLocaleDateString('ja-JP')}</Table.Td>

@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   Stack,
   Title,
@@ -26,8 +30,8 @@ import {
   IconAlertCircle,
   IconCheck,
   IconX,
-  IconChevronUp,
-  IconChevronDown,
+  IconGripVertical,
+  IconLock,
 } from '@tabler/icons-react';
 import { useAccounts } from '../hooks/useAccounts';
 import { useSubaccounts } from '../hooks/useSubaccounts';
@@ -51,9 +55,41 @@ const ACCOUNT_TYPE_LABELS = {
   expenses: '費用',
 } as const;
 
+// ─── Sortable row wrapper ───────────────────────────────────────────────────
+interface SortableRowProps {
+  id: string;
+  children: (dragHandle: React.ReactNode) => React.ReactNode;
+}
+
+function SortableRow({ id, children }: SortableRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  const dragHandle = (
+    <ActionIcon
+      size="sm"
+      variant="subtle"
+      color="gray"
+      style={{ cursor: 'grab', touchAction: 'none' }}
+      {...listeners}
+      {...attributes}
+    >
+      <IconGripVertical size={16} />
+    </ActionIcon>
+  );
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children(dragHandle)}
+    </div>
+  );
+}
+
 export default function AccountSettings() {
   const { isPro } = useEntitlements();
-  const { accounts, loading, error, createAccount, updateAccount, deleteAccount } = useAccounts();
+  const { accounts, loading, error, createAccount, updateAccount, deleteAccount, reorderAccounts } = useAccounts();
   const { fetchSubaccounts, createSubaccount, updateSubaccount, deleteSubaccount } = useSubaccounts();
   const [opened, { open, close }] = useDisclosure(false);
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -93,7 +129,28 @@ export default function AccountSettings() {
   const surfaceBorder = colorScheme === 'dark' ? '1px solid rgba(255,255,255,0.15)' : '1px solid #e9ecef';
   const surfaceTextMuted = colorScheme === 'dark' ? theme.colors.gray[6] : '#6c757d';
   const subaccountBg = colorScheme === 'dark' ? theme.colors.dark[7] : '#fff';
-  
+
+  // ─── DnD sensors ──────────────────────────────────────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent, type: string) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setAccountOrder((prev) => {
+      const list = [...(prev[type] || [])];
+      const oldIndex = list.indexOf(Number(active.id));
+      const newIndex = list.indexOf(Number(over.id));
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const newList = arrayMove(list, oldIndex, newIndex);
+      const updates = newList.map((id, index) => ({ id, sort_order: index }));
+      reorderAccounts(updates).catch(console.error);
+      return { ...prev, [type]: newList };
+    });
+  };
+
   // 補助科目を読み込む
   const loadSubaccounts = useCallback(async (accountId: number) => {
     if (subaccountsCache[accountId] || loadingSubaccounts[accountId]) return;
@@ -158,18 +215,6 @@ export default function AccountSettings() {
     } catch {
       setSubList([]);
     }
-  };
-
-  const moveAccountOrder = (type: string, accountId: number, direction: 'up' | 'down') => {
-    setAccountOrder((prev) => {
-      const list = [...(prev[type] || [])];
-      const idx = list.indexOf(accountId);
-      if (idx === -1) return prev;
-      const target = direction === 'up' ? idx - 1 : idx + 1;
-      if (target < 0 || target >= list.length) return prev;
-      [list[idx], list[target]] = [list[target], list[idx]];
-      return { ...prev, [type]: list };
-    });
   };
 
   // インライン編集を開始
@@ -239,8 +284,7 @@ export default function AccountSettings() {
   if (loading) {
     return (
       <Stack gap="md">
-        <Group justify="space-between">
-          <Title order={2}>勘定科目設定</Title>
+        <Group justify="flex-end">
           <Group gap="sm">
             <Skeleton height={32} width={160} radius="sm" />
             <Skeleton height={32} width={96} radius="sm" />
@@ -280,8 +324,7 @@ export default function AccountSettings() {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between">
-        <Title order={2}>勘定科目設定</Title>
+      <Group justify="flex-end">
         <Group gap="sm">
           <SegmentedControl
             value={viewMode}
@@ -297,6 +340,7 @@ export default function AccountSettings() {
           </Button>
         </Group>
       </Group>
+
 
       <Paper shadow="xs" p="md" radius="md">
         {Object.entries(accounts)
@@ -316,147 +360,160 @@ export default function AccountSettings() {
                   勘定科目がありません
                 </Box>
               ) : (
-                [...accountList]
-                  .sort((a: any, b: any) => {
-                    const order = accountOrder[type] || [];
-                    return order.indexOf(a.id) - order.indexOf(b.id);
-                  })
-                  .map((account: any, index: number, sortedList: any[]) => (
-                  <Box key={account.id}>
-                    {/* 勘定科目 */}
-                    <Group justify="space-between" p="xs" style={{
-                      backgroundColor: surfaceBg,
-                      borderRadius: '6px',
-                      border: surfaceBorder
-                    }}>
-                      {inlineEditingId === account.id ? (
-                        // インライン編集モード
-                        <Group gap="xs" style={{ flex: 1 }}>
-                          <TextInput
-                            value={inlineEditValue}
-                            onChange={(e) => setInlineEditValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') saveInlineEdit();
-                              if (e.key === 'Escape') cancelInlineEdit();
-                            }}
-                            autoFocus
-                            size="sm"
-                            style={{ flex: 1 }}
-                            disabled={isSubmitting}
-                          />
-                          <ActionIcon
-                            size="sm"
-                            variant="subtle"
-                            color="green"
-                            onClick={saveInlineEdit}
-                            loading={isSubmitting}
-                          >
-                            <IconCheck size={16} />
-                          </ActionIcon>
-                          <ActionIcon
-                            size="sm"
-                            variant="subtle"
-                            color="gray"
-                            onClick={cancelInlineEdit}
-                            disabled={isSubmitting}
-                          >
-                            <IconX size={16} />
-                          </ActionIcon>
-                        </Group>
-                      ) : (
-                        // 表示モード（クリックで編集開始）
-                        <span
-                          style={{
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            transition: 'background-color 0.15s',
-                          }}
-                          onClick={() => startInlineEdit(account)}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = colorScheme === 'dark'
-                              ? 'rgba(255,255,255,0.1)'
-                              : 'rgba(0,0,0,0.05)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                          }}
-                          title="クリックして編集"
-                        >
-                          {account.name}
-                        </span>
-                      )}
-                      <Group gap="xs">
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          onClick={() => moveAccountOrder(type, account.id, 'up')}
-                          disabled={index === 0}
-                          title="上へ移動"
-                        >
-                          <IconChevronUp size={16} />
-                        </ActionIcon>
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          onClick={() => moveAccountOrder(type, account.id, 'down')}
-                          disabled={index === sortedList.length - 1}
-                          title="下へ移動"
-                        >
-                          <IconChevronDown size={16} />
-                        </ActionIcon>
-                        {isPro && (
-                          <ActionIcon
-                            size="sm"
-                            variant="subtle"
-                            onClick={() => openSubaccountManager(account)}
-                            title="補助科目を管理"
-                          >
-                            <IconPlus size={16} />
-                          </ActionIcon>
-                        )}
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          color="red"
-                          onClick={() => handleDeleteAccount(account.id)}
-                          title="削除"
-                        >
-                          <IconTrash size={16} />
-                        </ActionIcon>
-                      </Group>
-                    </Group>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(e) => handleDragEnd(e, type)}
+                >
+                  <SortableContext
+                    items={[...(accountOrder[type] || accountList.map((a: any) => a.id))].map(String)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {[...accountList]
+                      .sort((a: any, b: any) => {
+                        const order = accountOrder[type] || [];
+                        return order.indexOf(a.id) - order.indexOf(b.id);
+                      })
+                      .map((account: any) => (
+                      <SortableRow key={String(account.id)} id={String(account.id)}>
+                        {(dragHandle) => (
+                          <Box>
+                            {/* 勘定科目 */}
+                            <Group justify="space-between" p="xs" style={{
+                              backgroundColor: surfaceBg,
+                              borderRadius: '6px',
+                              border: surfaceBorder
+                            }}>
+                              {inlineEditingId === account.id ? (
+                                // インライン編集モード
+                                <Group gap="xs" style={{ flex: 1 }}>
+                                  <TextInput
+                                    value={inlineEditValue}
+                                    onChange={(e) => setInlineEditValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') saveInlineEdit();
+                                      if (e.key === 'Escape') cancelInlineEdit();
+                                    }}
+                                    autoFocus
+                                    size="sm"
+                                    style={{ flex: 1 }}
+                                    disabled={isSubmitting}
+                                  />
+                                  <ActionIcon
+                                    size="sm"
+                                    variant="subtle"
+                                    color="green"
+                                    onClick={saveInlineEdit}
+                                    loading={isSubmitting}
+                                  >
+                                    <IconCheck size={16} />
+                                  </ActionIcon>
+                                  <ActionIcon
+                                    size="sm"
+                                    variant="subtle"
+                                    color="gray"
+                                    onClick={cancelInlineEdit}
+                                    disabled={isSubmitting}
+                                  >
+                                    <IconX size={16} />
+                                  </ActionIcon>
+                                </Group>
+                              ) : (
+                                // 表示モード（クリックで編集開始）
+                                <>
+                                  {dragHandle}
+                                  <span
+                                    style={{
+                                      flex: 1,
+                                      fontWeight: 500,
+                                      cursor: 'pointer',
+                                      padding: '4px 8px',
+                                      borderRadius: '4px',
+                                      transition: 'background-color 0.15s',
+                                    }}
+                                    onClick={() => startInlineEdit(account)}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = colorScheme === 'dark'
+                                        ? 'rgba(255,255,255,0.1)'
+                                        : 'rgba(0,0,0,0.05)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = 'transparent';
+                                    }}
+                                    title="クリックして編集"
+                                  >
+                                    {account.name}
+                                  </span>
+                                </>
+                              )}
+                              <Group gap="xs">
+                                {isPro && (
+                                  <ActionIcon
+                                    size="sm"
+                                    variant="subtle"
+                                    onClick={() => openSubaccountManager(account)}
+                                    title="補助科目を管理"
+                                  >
+                                    <IconPlus size={16} />
+                                  </ActionIcon>
+                                )}
+                                {account.is_system ? (
+                                  <ActionIcon
+                                    size="sm"
+                                    variant="subtle"
+                                    color="gray"
+                                    disabled
+                                    title="システム勘定科目は削除できません"
+                                  >
+                                    <IconLock size={16} />
+                                  </ActionIcon>
+                                ) : (
+                                  <ActionIcon
+                                    size="sm"
+                                    variant="subtle"
+                                    color="red"
+                                    onClick={() => handleDeleteAccount(account.id)}
+                                    title="削除"
+                                  >
+                                    <IconTrash size={16} />
+                                  </ActionIcon>
+                                )}
+                              </Group>
+                            </Group>
 
-                    {/* 補助科目をインデント表示（Pro版のみ） */}
-                    {isPro && subaccountsCache[account.id] && subaccountsCache[account.id].length > 0 && (
-                      <Stack gap={4} ml="xl" mt={4}>
-                        {subaccountsCache[account.id].map((sub) => (
-                          <Group
-                            key={sub.id}
-                            justify="space-between"
-                            p="xs"
-                            style={{
-                              backgroundColor: subaccountBg,
-                              borderRadius: '4px',
-                              border: surfaceBorder,
-                              marginLeft: '8px',
-                            }}
-                          >
-                            <Text size="sm" c="dimmed" style={{ paddingLeft: '8px' }}>
-                              └ {sub.name}
-                            </Text>
-                          </Group>
-                        ))}
-                      </Stack>
-                    )}
-                    {isPro && loadingSubaccounts[account.id] && (
-                      <Box ml="xl" mt={4} pl="md">
-                        <Loader size="xs" />
-                      </Box>
-                    )}
-                  </Box>
-                ))
+                            {/* 補助科目をインデント表示（Pro版のみ） */}
+                            {isPro && subaccountsCache[account.id] && subaccountsCache[account.id].length > 0 && (
+                              <Stack gap={4} ml="xl" mt={4}>
+                                {subaccountsCache[account.id].map((sub) => (
+                                  <Group
+                                    key={sub.id}
+                                    justify="space-between"
+                                    p="xs"
+                                    style={{
+                                      backgroundColor: subaccountBg,
+                                      borderRadius: '4px',
+                                      border: surfaceBorder,
+                                      marginLeft: '8px',
+                                    }}
+                                  >
+                                    <Text size="sm" c="dimmed" style={{ paddingLeft: '8px' }}>
+                                      └ {sub.name}
+                                    </Text>
+                                  </Group>
+                                ))}
+                              </Stack>
+                            )}
+                            {isPro && loadingSubaccounts[account.id] && (
+                              <Box ml="xl" mt={4} pl="md">
+                                <Loader size="xs" />
+                              </Box>
+                            )}
+                          </Box>
+                        )}
+                      </SortableRow>
+                    ))}
+                  </SortableContext>
+                </DndContext>
               )}
             </Stack>
           </Box>

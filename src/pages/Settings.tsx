@@ -1,4 +1,4 @@
-import { Box, Title, Paper, Stack, Text, Group } from '@mantine/core';
+import { Box, Paper, Stack, Text, Group, useComputedColorScheme } from '@mantine/core';
 import { useTheme, type PrimaryColor } from '../contexts/ThemeContext';
 
 const colorOptions: Array<{ value: PrimaryColor; label: string; color: string }> = [
@@ -12,15 +12,11 @@ const colorOptions: Array<{ value: PrimaryColor; label: string; color: string }>
 
 const Settings = () => {
   const { primaryColor, setPrimaryColor } = useTheme();
+  const colorScheme = useComputedColorScheme('light');
+  const isDark = colorScheme === 'dark';
 
   return (
     <Stack gap="xl">
-      <Box>
-        <Title order={1} mb="md">
-          設定
-        </Title>
-      </Box>
-
       <Paper p="xl" radius="md" withBorder>
         <Stack gap="md">
           <Box>
@@ -41,10 +37,10 @@ const Settings = () => {
                   cursor: 'pointer',
                   padding: '12px 20px',
                   borderRadius: '8px',
-                  border: `2px solid ${primaryColor === option.value ? option.color : 'transparent'}`,
-                  backgroundColor: primaryColor === option.value 
-                    ? `${option.color}15` 
-                    : 'var(--mantine-color-gray-0)',
+                  border: `2px solid ${primaryColor === option.value ? option.color : isDark ? '#373A40' : '#dee2e6'}`,
+                  backgroundColor: primaryColor === option.value
+                    ? `${option.color}${isDark ? '28' : '18'}`
+                    : isDark ? '#25262b' : '#f8f9fa',
                   transition: 'all 0.2s ease',
                   flex: '1 1 auto',
                   minWidth: '120px',

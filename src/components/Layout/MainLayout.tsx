@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppShell, Burger, Group, Title, UnstyledButton, Text, Box, Stack, ActionIcon, Affix, Menu, Avatar } from '@mantine/core';
-import { useMantineColorScheme, useMantineTheme } from '@mantine/core';
+import { useMantineColorScheme, useMantineTheme, useComputedColorScheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
   IconBook,
@@ -25,6 +26,11 @@ const mainLinks = [
   { icon: IconUser, label: 'マイページ', path: '/mypage' },
 ];
 
+// サイドバーの固定ダークカラー（ライト・ダーク両モード共通）
+const SIDEBAR_BG = '#1c2033';
+const SIDEBAR_BG_DARK = '#0f1117';
+const HEADER_HEIGHT = 52;
+
 interface MainLayoutProps {
   children: React.ReactNode;
 }
@@ -34,15 +40,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const { setColorScheme } = useMantineColorScheme();
+  const colorScheme = useComputedColorScheme('light');
   const theme = useMantineTheme();
   const isDark = colorScheme === 'dark';
 
   const toggleColorScheme = () => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark');
 
+  // ページ遷移時にスクロール位置をリセット
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   // プライマリカラーの取得
   const primaryColor = theme.primaryColor || 'orange';
   const primaryShade = theme.colors[primaryColor];
+  const sidebarBg = isDark ? SIDEBAR_BG_DARK : SIDEBAR_BG;
 
   const mainItems = mainLinks.map((link) => {
     const isActive = location.pathname === link.path;
@@ -54,30 +67,27 @@ export default function MainLayout({ children }: MainLayoutProps) {
           navigate(link.path);
           if (opened) toggle();
         }}
-        px="xl"
-        py="md"
-        style={() => ({
+        px="md"
+        py="sm"
+        style={{
           display: 'flex',
           alignItems: 'center',
           width: '100%',
           borderRadius: theme.radius.md,
-          color: isActive
-            ? isDark ? primaryShade[2] : primaryShade[6]
-            : isDark ? theme.colors.gray[1] : '#7A736C',
-          backgroundColor: isActive
-            ? isDark ? `${primaryShade[6]}30` : `${primaryShade[1]}`
-            : isDark ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
-          '&:hover': {
-            backgroundColor: isActive
-              ? isDark ? `${primaryShade[6]}40` : `${primaryShade[2]}`
-              : isDark ? 'rgba(255, 255, 255, 0.05)' : '#F7F5F3',
-          },
-          transition: 'all 0.2s ease',
-        })}
+          color: isActive ? '#ffffff' : 'rgba(255,255,255,0.65)',
+          backgroundColor: isActive ? primaryShade[6] : 'transparent',
+          transition: 'all 0.15s ease',
+        }}
+        onMouseEnter={(e) => {
+          if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.08)';
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+        }}
       >
         <Box style={{ display: 'flex', alignItems: 'center' }}>
-          <link.icon size={22} stroke={1.5} />
-          <Text ml="md" size="sm" fw={isActive ? 500 : 400}>
+          <link.icon size={20} stroke={1.5} />
+          <Text ml="sm" size="sm" fw={isActive ? 600 : 400} style={{ color: 'inherit' }}>
             {link.label}
           </Text>
         </Box>
@@ -87,86 +97,98 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <AppShell
-      header={{ height: 70 }}
+      header={{ height: HEADER_HEIGHT }}
       navbar={{
-        width: 300,
+        width: 240,
         breakpoint: 'sm',
         collapsed: { mobile: !opened, desktop: false },
       }}
       padding="xl"
       style={{ minHeight: '100vh' }}
     >
-      <AppShell.Header>
-        <Group
-          h="100%"
-          px="xl"
-          justify="space-between"
-          style={() => ({
-            backgroundColor: colorScheme === 'dark' ? theme.colors.dark[6] : primaryShade[6],
-          })}
-        >
-          <Group>
-            <Burger 
-              opened={opened} 
-              onClick={toggle} 
-              hiddenFrom="sm" 
-              size="sm"
-              color="white"
-            />
-            <Title order={3} c="white" style={{ fontWeight: 500 }}>複式簿記</Title>
-          </Group>
-          
+      {/* スリムなトップバー */}
+      <AppShell.Header
+        style={{
+          backgroundColor: isDark ? SIDEBAR_BG_DARK : SIDEBAR_BG,
+          borderBottom: 'none',
+        }}
+      >
+        <Group h="100%" px="md" justify="space-between">
           <Group gap="xs">
-            <ActionIcon variant="subtle" size="lg" radius="xl" onClick={toggleColorScheme} aria-label="Toggle color scheme" c="white">
-              {colorScheme === 'dark' ? <IconSun size={18} color="white" /> : <IconMoon size={18} color="white" />}
+            <Burger
+              opened={opened}
+              onClick={toggle}
+              hiddenFrom="sm"
+              size="sm"
+              color="rgba(255,255,255,0.8)"
+            />
+          </Group>
+
+          <Group gap="xs">
+            <ActionIcon
+              variant="subtle"
+              size="md"
+              radius="xl"
+              onClick={toggleColorScheme}
+              aria-label="Toggle color scheme"
+              style={{ color: 'rgba(255,255,255,0.75)' }}
+            >
+              {colorScheme === 'dark' ? <IconSun size={17} /> : <IconMoon size={17} />}
             </ActionIcon>
 
             <Menu shadow="md" width={200}>
-            <Menu.Target>
-              <ActionIcon variant="subtle" size="lg" radius="xl">
-                <Avatar size="sm" radius="xl" color="white">
-                  {user?.email?.charAt(0).toUpperCase() || <IconUser size={20} />}
-                </Avatar>
-              </ActionIcon>
-            </Menu.Target>
-
-            <Menu.Dropdown style={{ borderRadius: 8 }}>
-              <Menu.Label>{user?.email}</Menu.Label>
-              <Menu.Divider />
-              <Menu.Item onClick={() => navigate('/mypage')}>マイページ</Menu.Item>
-            </Menu.Dropdown>
+              <Menu.Target>
+                <ActionIcon variant="subtle" size="md" radius="xl">
+                  <Avatar size={26} radius="xl" color={primaryColor} variant="filled">
+                    {user?.email?.charAt(0).toUpperCase() || <IconUser size={14} />}
+                  </Avatar>
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown style={{ borderRadius: 8 }}>
+                <Menu.Label>{user?.email}</Menu.Label>
+                <Menu.Divider />
+                <Menu.Item onClick={() => navigate('/mypage')}>マイページ</Menu.Item>
+              </Menu.Dropdown>
             </Menu>
           </Group>
         </Group>
       </AppShell.Header>
 
+      {/* ダークサイドバー */}
       <AppShell.Navbar
-        p="md"
-        style={() => ({
-          backgroundColor: colorScheme === 'dark' ? theme.colors.dark[7] : primaryShade[0],
-          borderRight: colorScheme === 'dark'
-            ? '1px solid rgba(255, 255, 255, 0.1)'
-            : `1px solid ${primaryShade[2]}`,
+        style={{
+          backgroundColor: sidebarBg,
+          borderRight: 'none',
           zIndex: 1000,
-        })}
+        }}
       >
-        <Box 
-          p="md"
+        <Box
           style={{
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-between',
           }}
         >
-          <Box>
-            <Text size="sm" fw={500} c="dimmed" mb="lg" px="md">
-              メニュー
-            </Text>
-            <Stack gap="xs">{mainItems}</Stack>
+          {/* アプリ名 */}
+          <Box px="md" py="lg" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <Title
+              order={4}
+              style={{
+                color: '#ffffff',
+                fontWeight: 700,
+                letterSpacing: '0.5px',
+                cursor: 'pointer',
+              }}
+              onClick={() => navigate('/reports')}
+            >
+              BS家計簿
+            </Title>
           </Box>
 
-          <Box mt="lg" />
+          {/* ナビゲーション */}
+          <Box p="sm" style={{ flex: 1, overflowY: 'auto' }}>
+            <Stack gap={2}>{mainItems}</Stack>
+          </Box>
         </Box>
       </AppShell.Navbar>
 
@@ -178,12 +200,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
             width: '100%',
             backgroundColor: colorScheme === 'dark' ? theme.colors.dark[8] : '#FDFCFB',
             padding: '24px',
-            minHeight: 'calc(100vh - 70px)',
+            minHeight: `calc(100vh - ${HEADER_HEIGHT}px)`,
           })}
         >
           {children}
         </Box>
-        
+
         {/* モバイル用フローティングボタン */}
         <Affix position={{ bottom: 20, right: 20 }}>
           <ActionIcon

@@ -1,17 +1,12 @@
 import { useAuth } from '../contexts/AuthContext'
-import { Button, Card, Group, Stack, Text, Title } from '@mantine/core'
-import { IconLogout, IconUser } from '@tabler/icons-react'
+import { Button, Card, Group, Stack, Text } from '@mantine/core'
+import { IconLogout } from '@tabler/icons-react'
 
 export default function MyPage() {
   const { user, signOut } = useAuth()
 
   return (
     <Stack>
-      <Group>
-        <IconUser />
-        <Title order={3}>マイページ</Title>
-      </Group>
-
       <Card withBorder padding="lg" radius="md">
         <Stack>
           <Text size="sm" c="dimmed">ログイン中</Text>

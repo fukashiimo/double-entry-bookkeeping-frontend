@@ -19,19 +19,37 @@ export const useAccounts = () => {
       const accessToken = sessionData.session?.access_token
       if (!accessToken) throw new Error('Unauthorized: no access token')
 
+      const headers = {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      }
+
       // Edge Functions API を使用（ユーザーのアクセストークンで呼び出し）
-      const response = await fetch(`${supabaseUrl}/functions/v1/accounts`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      })
+      const response = await fetch(`${supabaseUrl}/functions/v1/accounts`, { headers })
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data = await response.json()
+
+      // 勘定科目がまだ未登録の新規ユーザーにはデフォルト科目をシード
+      const total = (data.assets?.length ?? 0) + (data.liabilities?.length ?? 0) +
+        (data.equity?.length ?? 0) + (data.revenue?.length ?? 0) + (data.expenses?.length ?? 0)
+
+      if (total === 0) {
+        await fetch(`${supabaseUrl}/functions/v1/seed-accounts`, {
+          method: 'POST',
+          headers,
+        })
+        // シード後に再取得
+        const seededResponse = await fetch(`${supabaseUrl}/functions/v1/accounts`, { headers })
+        if (seededResponse.ok) {
+          const seededData = await seededResponse.json()
+          setAccounts(seededData)
+          return
+        }
+      }
 
       // Edge Functions API は既にグループ化されたデータを返す
       setAccounts(data)
@@ -197,6 +215,26 @@ export const useAccounts = () => {
     }
   }
 
+  const reorderAccounts = async (updates: Array<{ id: number; sort_order: number }>) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Unauthorized: no access token')
+      const response = await fetch(`${supabaseUrl}/functions/v1/accounts`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ updates }),
+      })
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    } catch (err) {
+      console.error('Error reordering accounts:', err)
+      throw err
+    }
+  }
+
   useEffect(() => {
     fetchAccounts()
   }, [])
@@ -209,6 +247,7 @@ export const useAccounts = () => {
     createAccount,
     updateAccount,
     deleteAccount,
+    reorderAccounts,
   }
 }
 

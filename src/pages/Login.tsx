@@ -1,5 +1,6 @@
 import { Container, Paper, Title, Text, Button, Stack, Box, useMantineTheme } from '@mantine/core'
 import { useMantineColorScheme } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { IconBrandGoogle, IconBrandApple, IconBrandWindows } from '@tabler/icons-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useState } from 'react'
@@ -16,7 +17,7 @@ export default function Login() {
       await signInWithGoogle()
     } catch (error) {
       console.error('Google sign in error:', error)
-      alert('Googleログインに失敗しました')
+      notifications.show({ title: 'ログインエラー', message: 'Googleログインに失敗しました', color: 'red' })
     } finally {
       setLoading(null)
     }
@@ -28,7 +29,7 @@ export default function Login() {
       await signInWithApple()
     } catch (error) {
       console.error('Apple sign in error:', error)
-      alert('Appleログインに失敗しました')
+      notifications.show({ title: 'ログインエラー', message: 'Appleログインに失敗しました', color: 'red' })
     } finally {
       setLoading(null)
     }
@@ -40,7 +41,7 @@ export default function Login() {
       await signInWithMicrosoft()
     } catch (error) {
       console.error('Microsoft sign in error:', error)
-      alert('Microsoftログインに失敗しました')
+      notifications.show({ title: 'ログインエラー', message: 'Microsoftログインに失敗しました', color: 'red' })
     } finally {
       setLoading(null)
     }

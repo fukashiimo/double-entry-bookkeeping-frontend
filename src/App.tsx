@@ -4,6 +4,8 @@ import { MantineProvider, localStorageColorSchemeManager } from '@mantine/core';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import '@mantine/charts/styles.css';
+import '@mantine/notifications/styles.css';
+import { Notifications } from '@mantine/notifications';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
@@ -31,9 +33,7 @@ function AppContent() {
     amount: number;
   } | null>(null);
 
-  const handleSubmit = (data: { date: Date | null; [key: string]: unknown }, isEditMode?: boolean) => {
-    console.log('Form submitted:', data);
-    // 編集モードの場合のみ仕訳帳に遷移
+  const handleSubmit = (_data: { date: Date | null; [key: string]: unknown }, isEditMode?: boolean) => {
     if (isEditMode) {
       setEditData(null);
       navigate('/journal-list');
@@ -66,15 +66,17 @@ function AppContent() {
             <MainLayout>
               <Routes>
                 <Route path="/" element={<Navigate to="/reports" replace />} />
-                <Route 
-                  path="/journal-entry" 
+                <Route
+                  path="/journal-entry"
                   element={
-                    <JournalEntryForm 
-                      onSubmit={handleSubmit} 
+                    <JournalEntryForm
+                      key={editData?.id ?? 'new'}
+                      onSubmit={handleSubmit}
                       editData={editData || undefined}
                       onCancel={editData ? handleCancelEdit : undefined}
+                      onEdit={handleEdit}
                     />
-                  } 
+                  }
                 />
                 <Route 
                   path="/journal-list" 
@@ -82,7 +84,7 @@ function AppContent() {
                 />
                 <Route path="/account-settings" element={<AccountSettings />} />
                 <Route path="/mypage" element={<MyPage />} />
-                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/calendar" element={<CalendarPage onEdit={handleEdit} />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/reports" element={<Reports />} />
@@ -109,6 +111,7 @@ function ThemedApp() {
       defaultColorScheme="light"
       colorSchemeManager={localStorageColorSchemeManager({ key: 'color-scheme' })}
     >
+      <Notifications position="top-right" />
       <AppContent />
     </MantineProvider>
   );
