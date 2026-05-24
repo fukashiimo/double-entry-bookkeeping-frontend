@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Paper, Title, Stack, Grid, Text, Group, SegmentedControl,
-  Table, Alert, Card, ThemeIcon, Divider, Button, Loader,
+  Table, Alert, Card, ThemeIcon, Divider, Button, Loader, Center,
   Switch, Select, Box,
 } from '@mantine/core';
 import {
@@ -21,36 +21,45 @@ export default function Reports() {
   const urlMonth = searchParams.get('month');
   const navigate = useNavigate();
 
+  // URLパラメータがある場合はその値を使い、ない場合は仕訳データ取得後に確定
   const [selectedYear, setSelectedYear] = useState<number>(() => {
     if (urlYear) return parseInt(urlYear, 10);
-    return currentYear;
+    return currentYear; // 一時値（isInitializedがfalseの間はLoader表示）
   });
   const [selectedMonth, setSelectedMonth] = useState<number>(() => {
     if (urlMonth) return parseInt(urlMonth, 10);
-    return new Date().getMonth() + 1;
+    return 1; // 一時値（isInitializedがfalseの間はLoader表示）
   });
   const [reportType, setReportType] = useState<string>('summary');
   const [hideZeroAccounts, setHideZeroAccounts] = useState<boolean>(false);
   const [showAllSubaccounts, setShowAllSubaccounts] = useState<boolean>(false);
   const [expandedSubaccounts, setExpandedSubaccounts] = useState<Record<string, boolean>>({});
-  const [isInitialized, setIsInitialized] = useState<boolean>(!!urlYear || !!urlMonth);
+  const [isInitialized, setIsInitialized] = useState<boolean>(!!urlYear && !!urlMonth);
   const [periodMode, setPeriodMode] = useState<'single' | 'range' | 'annual'>('single');
   const [startMonth, setStartMonth] = useState<number>(1);
   const [endMonth, setEndMonth] = useState<number>(12);
 
-  const { journalEntries } = useJournalEntries();
+  const { journalEntries, loading: journalEntriesLoading } = useJournalEntries();
 
+  // 初期表示月：URLパラメータがなければ仕訳データ取得後に最新月を確定する
   useEffect(() => {
-    if (!isInitialized && journalEntries && journalEntries.length > 0) {
+    if (isInitialized) return;
+    if (journalEntriesLoading) return; // まだ読み込み中
+
+    if (journalEntries && journalEntries.length > 0) {
       const sortedEntries = [...journalEntries].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       const lastEntryDate = new Date(sortedEntries[0].date);
       setSelectedYear(lastEntryDate.getFullYear());
       setSelectedMonth(lastEntryDate.getMonth() + 1);
-      setIsInitialized(true);
+    } else {
+      // 仕訳が0件 → 現在月
+      setSelectedYear(currentYear);
+      setSelectedMonth(new Date().getMonth() + 1);
     }
-  }, [journalEntries, isInitialized]);
+    setIsInitialized(true);
+  }, [journalEntries, journalEntriesLoading, isInitialized, currentYear]);
 
   const dashboardOptions = useMemo(() => ({
     periodMode,
@@ -94,6 +103,18 @@ export default function Reports() {
   }, [data?.expenseData, hideZeroAccounts]);
 
   const tooltipFormatter = (value: number) => `¥${value.toLocaleString()}`;
+
+  // 初期表示月が確定するまではローダーを表示（誤った月を一瞬でも描画しない）
+  if (!isInitialized) {
+    return (
+      <Center style={{ minHeight: 300 }}>
+        <Stack align="center" gap="sm">
+          <Loader size="md" />
+          <Text size="sm" c="dimmed">表示月を確認中...</Text>
+        </Stack>
+      </Center>
+    );
+  }
 
   if (error) {
     return (

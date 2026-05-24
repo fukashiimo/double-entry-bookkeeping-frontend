@@ -26,9 +26,6 @@ const mainLinks = [
   { icon: IconUser, label: 'マイページ', path: '/mypage' },
 ];
 
-// サイドバーの固定ダークカラー（ライト・ダーク両モード共通）
-const SIDEBAR_BG = '#1c2033';
-const SIDEBAR_BG_DARK = '#0f1117';
 const HEADER_HEIGHT = 52;
 
 interface MainLayoutProps {
@@ -52,10 +49,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  // プライマリカラーの取得
+  // プライマリカラーの取得（テーマカラーに連動したサイドバー）
   const primaryColor = theme.primaryColor || 'orange';
   const primaryShade = theme.colors[primaryColor];
-  const sidebarBg = isDark ? SIDEBAR_BG_DARK : SIDEBAR_BG;
+  // サイドバー: ダークシェード[9]を使用。ダークモードはさらに暗く
+  const sidebarBg = isDark ? primaryShade[9] : primaryShade[9];
+  const activeItemBg = 'rgba(255,255,255,0.18)';
 
   const mainItems = mainLinks.map((link) => {
     const isActive = location.pathname === link.path;
@@ -74,15 +73,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
           alignItems: 'center',
           width: '100%',
           borderRadius: theme.radius.md,
-          color: isActive ? '#ffffff' : 'rgba(255,255,255,0.65)',
-          backgroundColor: isActive ? primaryShade[6] : 'transparent',
+          color: '#ffffff',
+          backgroundColor: isActive ? activeItemBg : 'transparent',
           transition: 'all 0.15s ease',
+          opacity: isActive ? 1 : 0.75,
         }}
         onMouseEnter={(e) => {
-          if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.08)';
+          if (!isActive) {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.08)';
+            (e.currentTarget as HTMLElement).style.opacity = '1';
+          }
         }}
         onMouseLeave={(e) => {
-          if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+          if (!isActive) {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+            (e.currentTarget as HTMLElement).style.opacity = '0.75';
+          }
         }}
       >
         <Box style={{ display: 'flex', alignItems: 'center' }}>
@@ -109,7 +115,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       {/* スリムなトップバー */}
       <AppShell.Header
         style={{
-          backgroundColor: isDark ? SIDEBAR_BG_DARK : SIDEBAR_BG,
+          backgroundColor: sidebarBg,
           borderBottom: 'none',
         }}
       >
@@ -160,6 +166,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           backgroundColor: sidebarBg,
           borderRight: 'none',
           zIndex: 1000,
+          boxShadow: '2px 0 8px rgba(0,0,0,0.15)',
         }}
       >
         <Box

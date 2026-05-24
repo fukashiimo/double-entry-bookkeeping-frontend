@@ -10,7 +10,7 @@ export const useAccounts = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = async (includeInactive = false) => {
     try {
       setLoading(true)
       setError(null)
@@ -25,7 +25,8 @@ export const useAccounts = () => {
       }
 
       // Edge Functions API を使用（ユーザーのアクセストークンで呼び出し）
-      const response = await fetch(`${supabaseUrl}/functions/v1/accounts`, { headers })
+      const params = includeInactive ? '?include_inactive=true' : ''
+      const response = await fetch(`${supabaseUrl}/functions/v1/accounts${params}`, { headers })
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -235,6 +236,50 @@ export const useAccounts = () => {
     }
   }
 
+  const deactivateAccount = async (id: number) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Unauthorized: no access token')
+      const response = await fetch(`${supabaseUrl}/functions/v1/accounts`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_active: false }),
+      })
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      const updated = await response.json()
+      if (accounts) {
+        const updatedAccounts = { ...accounts }
+        for (const key of Object.keys(updatedAccounts) as (keyof GroupedAccounts)[]) {
+          updatedAccounts[key] = updatedAccounts[key].filter(a => a.id !== id)
+        }
+        setAccounts(updatedAccounts)
+      }
+      return updated
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+      throw err
+    }
+  }
+
+  const reactivateAccount = async (id: number) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Unauthorized: no access token')
+      const response = await fetch(`${supabaseUrl}/functions/v1/accounts`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_active: true }),
+      })
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      return await response.json()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+      throw err
+    }
+  }
+
   useEffect(() => {
     fetchAccounts()
   }, [])
@@ -247,6 +292,8 @@ export const useAccounts = () => {
     createAccount,
     updateAccount,
     deleteAccount,
+    deactivateAccount,
+    reactivateAccount,
     reorderAccounts,
   }
 }

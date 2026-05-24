@@ -710,126 +710,194 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
   );
 
   // ─── 簡単入力モード ──────────────────────────────────────────────────────
-  const renderSimpleMode = () => (
-    <Stack gap="md">
-      <SegmentedControl
-        value={simpleType || ''}
-        onChange={(v) => {
-          setSimpleType(v as SimpleType);
-          form.setFieldValue('debitAccount', '');
-          form.setFieldValue('creditAccount', '');
-          form.setFieldValue('debitSubaccount', '');
-          form.setFieldValue('creditSubaccount', '');
-          setDebitSubOptions([]); setCreditSubOptions([]);
-        }}
-        data={[{ label: '収益（収入）', value: 'income' }, { label: '費用（支出）', value: 'expense' }, { label: '振替', value: 'transfer' }]}
-        fullWidth size="md"
-      />
+  const renderSimpleMode = () => {
+    const blockStyle: React.CSSProperties = {
+      maxWidth: 600,
+      width: '100%',
+      alignSelf: 'center',
+    };
+    const blockHeaderStyle: React.CSSProperties = {
+      fontSize: '12px',
+      fontWeight: 700,
+      letterSpacing: '0.05em',
+      textTransform: 'uppercase',
+      color: 'var(--mantine-color-dimmed)',
+      marginBottom: 12,
+    };
 
-      {simpleType && (
-        <>
-          {renderDateInputs()}
+    return (
+    <Stack gap="lg" align="stretch">
 
-          <Grid>
-            <Grid.Col span={6}>
-              <AccountSelect
-                ref={debitAccountRef}
-                label={simpleType === 'income' ? '収益（収入）の種類' : simpleType === 'expense' ? '費用（支出）の種類' : '振替元（減少）'}
-                required size="sm"
-                data={simpleType === 'income' ? revenueAccountOptions : simpleType === 'expense' ? expenseAccountOptions : groupedAccountOptions}
-                value={simpleType === 'income' ? form.values.creditAccount : simpleType === 'expense' ? form.values.debitAccount : form.values.creditAccount}
-                onChange={async (val) => {
-                  if (simpleType === 'income') {
-                    form.setFieldValue('creditAccount', val); form.setFieldValue('creditSubaccount', '');
-                    const list = await fetchSubaccounts(findAccountIdByName(val));
-                    setCreditSubOptions(list.map(s => ({ value: s.name, label: s.name })));
-                  } else if (simpleType === 'expense') {
-                    form.setFieldValue('debitAccount', val); form.setFieldValue('debitSubaccount', '');
-                    const list = await fetchSubaccounts(findAccountIdByName(val));
-                    setDebitSubOptions(list.map(s => ({ value: s.name, label: s.name })));
-                  } else {
-                    form.setFieldValue('creditAccount', val); form.setFieldValue('creditSubaccount', '');
-                    const list = await fetchSubaccounts(findAccountIdByName(val));
-                    setCreditSubOptions(list.map(s => ({ value: s.name, label: s.name })));
-                  }
-                }}
-                onEnterKey={() => setTimeout(() => creditAccountRef.current?.focus(), 10)}
-                error={simpleType === 'income' ? form.errors.creditAccount : simpleType === 'expense' ? form.errors.debitAccount : form.errors.creditAccount}
-              />
-              {isPro && ((simpleType === 'income' && creditSubOptions.length > 0) || (simpleType === 'expense' && debitSubOptions.length > 0) || (simpleType === 'transfer' && creditSubOptions.length > 0)) && (
-                <Select label="補助科目" placeholder="補助科目を選択"
-                  data={simpleType === 'expense' ? debitSubOptions : creditSubOptions}
-                  searchable clearable size="sm" mt="xs"
-                  value={simpleType === 'expense' ? form.values.debitSubaccount : form.values.creditSubaccount}
-                  onChange={(v) => { if (simpleType === 'expense') form.setFieldValue('debitSubaccount', v || ''); else form.setFieldValue('creditSubaccount', v || ''); }}
-                />
-              )}
-            </Grid.Col>
+      {/* ブロック1: 取引区分 */}
+      <Box style={blockStyle}>
+        <SegmentedControl
+          value={simpleType || ''}
+          onChange={(v) => {
+            setSimpleType(v as SimpleType);
+            form.setFieldValue('debitAccount', '');
+            form.setFieldValue('creditAccount', '');
+            form.setFieldValue('debitSubaccount', '');
+            form.setFieldValue('creditSubaccount', '');
+            setDebitSubOptions([]); setCreditSubOptions([]);
+          }}
+          data={[{ label: '収益（収入）', value: 'income' }, { label: '費用（支出）', value: 'expense' }, { label: '振替', value: 'transfer' }]}
+          fullWidth size="md"
+        />
+      </Box>
 
-            <Grid.Col span={6}>
-              <AccountSelect
-                ref={creditAccountRef}
-                label={simpleType === 'income' ? '入金先' : simpleType === 'expense' ? '支払方法' : '振替先（増加）'}
-                required size="sm"
-                data={simpleType === 'transfer' ? groupedAccountOptions : assetAccountOptions}
-                value={simpleType === 'income' ? form.values.debitAccount : simpleType === 'expense' ? form.values.creditAccount : form.values.debitAccount}
-                onChange={async (val) => {
-                  if (simpleType === 'income') {
-                    form.setFieldValue('debitAccount', val); form.setFieldValue('debitSubaccount', '');
-                    const list = await fetchSubaccounts(findAccountIdByName(val));
-                    setDebitSubOptions(list.map(s => ({ value: s.name, label: s.name })));
-                  } else if (simpleType === 'expense') {
-                    form.setFieldValue('creditAccount', val); form.setFieldValue('creditSubaccount', '');
-                    const list = await fetchSubaccounts(findAccountIdByName(val));
-                    setCreditSubOptions(list.map(s => ({ value: s.name, label: s.name })));
-                  } else {
-                    form.setFieldValue('debitAccount', val); form.setFieldValue('debitSubaccount', '');
-                    const list = await fetchSubaccounts(findAccountIdByName(val));
-                    setDebitSubOptions(list.map(s => ({ value: s.name, label: s.name })));
-                  }
-                }}
-                onEnterKey={() => setTimeout(() => simpleAmountRef.current?.focus(), 10)}
-                error={simpleType === 'income' ? form.errors.debitAccount : simpleType === 'expense' ? form.errors.creditAccount : form.errors.debitAccount}
-              />
-              {isPro && ((simpleType === 'income' && debitSubOptions.length > 0) || (simpleType === 'expense' && creditSubOptions.length > 0) || (simpleType === 'transfer' && debitSubOptions.length > 0)) && (
-                <Select label="補助科目" placeholder="補助科目を選択"
-                  data={simpleType === 'expense' ? creditSubOptions : debitSubOptions}
-                  searchable clearable size="sm" mt="xs"
-                  value={simpleType === 'expense' ? form.values.creditSubaccount : form.values.debitSubaccount}
-                  onChange={(v) => { if (simpleType === 'expense') form.setFieldValue('creditSubaccount', v || ''); else form.setFieldValue('debitSubaccount', v || ''); }}
-                />
-              )}
-            </Grid.Col>
-          </Grid>
-
-          <AmountInput
-            ref={simpleAmountRef}
-            label="金額" placeholder="金額を入力" required size="sm"
-            value={form.values.debitAmount}
-            onChange={handleDebitAmountChange}
-            onBlurAutoFill={handleDebitAmountBlur}
-            error={form.errors.debitAmount}
-          />
-
+      {/* ブロック2: 日付 */}
+      <Paper p="md" withBorder radius="md" style={blockStyle}>
+        <Text style={blockHeaderStyle}>日付</Text>
+        <Group gap="xs" align="flex-end">
           <TextInput
-            label="摘要" placeholder="取引の内容を入力" size="sm"
+            ref={yearRef}
+            label="年"
+            placeholder="2026"
+            value={yearValue}
+            maxLength={4}
+            style={{ width: 80 }}
+            onChange={(e) => setYearValue(e.currentTarget.value)}
+            error={dateError ? ' ' : undefined}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                setTimeout(() => monthDayRef.current?.focus(), 10);
+              }
+            }}
+          />
+          <Text size="sm" c="dimmed" mb={6}>年</Text>
+          <TextInput
+            ref={monthDayRef}
+            label="月日"
+            placeholder="0324"
+            value={monthDayValue}
+            maxLength={5}
+            style={{ width: 90 }}
+            onChange={(e) => setMonthDayValue(e.currentTarget.value)}
+            error={dateError ?? undefined}
+            onBlur={() => setMonthDayValue(formatMonthDay(monthDayValue))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                setMonthDayValue(formatMonthDay(monthDayValue));
+                setTimeout(() => debitAccountRef.current?.focus(), 10);
+              }
+            }}
+          />
+          <Text size="sm" c="dimmed" mb={6}>月日</Text>
+        </Group>
+        {dateError && <Text size="xs" c="red" mt={4}>{dateError}</Text>}
+      </Paper>
+
+      {/* ブロック3: 取引内容 */}
+      <Paper p="md" withBorder radius="md" style={blockStyle}>
+        <Text style={blockHeaderStyle}>取引内容</Text>
+        {simpleType ? (
+          <Stack gap="sm">
+            <AccountSelect
+              ref={debitAccountRef}
+              label={simpleType === 'income' ? '収益（収入）の種類' : simpleType === 'expense' ? '費用（支出）の種類' : '振替元'}
+              required
+              data={simpleType === 'income' ? revenueAccountOptions : simpleType === 'expense' ? expenseAccountOptions : groupedAccountOptions}
+              value={simpleType === 'income' ? form.values.creditAccount : simpleType === 'expense' ? form.values.debitAccount : form.values.creditAccount}
+              onChange={async (val) => {
+                if (simpleType === 'income') {
+                  form.setFieldValue('creditAccount', val); form.setFieldValue('creditSubaccount', '');
+                  const list = await fetchSubaccounts(findAccountIdByName(val));
+                  setCreditSubOptions(list.map(s => ({ value: s.name, label: s.name })));
+                } else if (simpleType === 'expense') {
+                  form.setFieldValue('debitAccount', val); form.setFieldValue('debitSubaccount', '');
+                  const list = await fetchSubaccounts(findAccountIdByName(val));
+                  setDebitSubOptions(list.map(s => ({ value: s.name, label: s.name })));
+                } else {
+                  form.setFieldValue('creditAccount', val); form.setFieldValue('creditSubaccount', '');
+                  const list = await fetchSubaccounts(findAccountIdByName(val));
+                  setCreditSubOptions(list.map(s => ({ value: s.name, label: s.name })));
+                }
+              }}
+              onEnterKey={() => setTimeout(() => creditAccountRef.current?.focus(), 10)}
+              error={simpleType === 'income' ? form.errors.creditAccount : simpleType === 'expense' ? form.errors.debitAccount : form.errors.creditAccount}
+            />
+            {isPro && ((simpleType === 'income' && creditSubOptions.length > 0) || (simpleType === 'expense' && debitSubOptions.length > 0) || (simpleType === 'transfer' && creditSubOptions.length > 0)) && (
+              <Select label="補助科目" placeholder="補助科目を選択"
+                data={simpleType === 'expense' ? debitSubOptions : creditSubOptions}
+                searchable clearable size="sm"
+                value={simpleType === 'expense' ? form.values.debitSubaccount : form.values.creditSubaccount}
+                onChange={(v) => { if (simpleType === 'expense') form.setFieldValue('debitSubaccount', v || ''); else form.setFieldValue('creditSubaccount', v || ''); }}
+              />
+            )}
+            <AccountSelect
+              ref={creditAccountRef}
+              label={simpleType === 'income' ? '入金先' : simpleType === 'expense' ? '支払方法' : '振替先'}
+              required
+              data={simpleType === 'transfer' ? groupedAccountOptions : assetAccountOptions}
+              value={simpleType === 'income' ? form.values.debitAccount : simpleType === 'expense' ? form.values.creditAccount : form.values.debitAccount}
+              onChange={async (val) => {
+                if (simpleType === 'income') {
+                  form.setFieldValue('debitAccount', val); form.setFieldValue('debitSubaccount', '');
+                  const list = await fetchSubaccounts(findAccountIdByName(val));
+                  setDebitSubOptions(list.map(s => ({ value: s.name, label: s.name })));
+                } else if (simpleType === 'expense') {
+                  form.setFieldValue('creditAccount', val); form.setFieldValue('creditSubaccount', '');
+                  const list = await fetchSubaccounts(findAccountIdByName(val));
+                  setCreditSubOptions(list.map(s => ({ value: s.name, label: s.name })));
+                } else {
+                  form.setFieldValue('debitAccount', val); form.setFieldValue('debitSubaccount', '');
+                  const list = await fetchSubaccounts(findAccountIdByName(val));
+                  setDebitSubOptions(list.map(s => ({ value: s.name, label: s.name })));
+                }
+              }}
+              onEnterKey={() => setTimeout(() => simpleAmountRef.current?.focus(), 10)}
+              error={simpleType === 'income' ? form.errors.debitAccount : simpleType === 'expense' ? form.errors.creditAccount : form.errors.debitAccount}
+            />
+            {isPro && ((simpleType === 'income' && debitSubOptions.length > 0) || (simpleType === 'expense' && creditSubOptions.length > 0) || (simpleType === 'transfer' && debitSubOptions.length > 0)) && (
+              <Select label="補助科目" placeholder="補助科目を選択"
+                data={simpleType === 'expense' ? creditSubOptions : debitSubOptions}
+                searchable clearable size="sm"
+                value={simpleType === 'expense' ? form.values.creditSubaccount : form.values.debitSubaccount}
+                onChange={(v) => { if (simpleType === 'expense') form.setFieldValue('creditSubaccount', v || ''); else form.setFieldValue('debitSubaccount', v || ''); }}
+              />
+            )}
+            <AmountInput
+              ref={simpleAmountRef}
+              label="金額" placeholder="金額を入力" required
+              value={form.values.debitAmount}
+              onChange={handleDebitAmountChange}
+              onBlurAutoFill={handleDebitAmountBlur}
+              error={form.errors.debitAmount}
+            />
+          </Stack>
+        ) : (
+          <Text c="dimmed" size="sm" ta="center" py="md">上の取引区分を選択してください</Text>
+        )}
+      </Paper>
+
+      {/* ブロック4: 摘要・登録 */}
+      <Paper p="md" withBorder radius="md" style={blockStyle}>
+        <Text style={blockHeaderStyle}>摘要・登録</Text>
+        <Stack gap="sm">
+          <TextInput
+            label="摘要"
+            placeholder="取引の内容を入力"
             onKeyDown={handleDescriptionKeyDown}
             {...form.getInputProps('description')}
           />
+          <Group justify="flex-end">
+            <Button
+              type="submit"
+              loading={loading}
+              disabled={!simpleType}
+              style={{ minWidth: 160, maxWidth: 240 }}
+            >
+              登録
+            </Button>
+          </Group>
+        </Stack>
+      </Paper>
 
-          <Box style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button type="submit" loading={loading} style={{ minWidth: 160 }}>登録</Button>
-          </Box>
-        </>
-      )}
-
-      {!simpleType && (
-        <Paper p="xl" withBorder radius="md" style={{ backgroundColor: colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0], textAlign: 'center' }}>
-          <Text c="dimmed">上から取引タイプを選択してください</Text>
-        </Paper>
-      )}
     </Stack>
-  );
+    );
+  };
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (

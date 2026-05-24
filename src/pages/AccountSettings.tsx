@@ -21,6 +21,8 @@ import {
   useMantineColorScheme,
   SegmentedControl,
   Skeleton,
+  Badge,
+  Switch,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -89,7 +91,7 @@ function SortableRow({ id, children }: SortableRowProps) {
 
 export default function AccountSettings() {
   const { isPro } = useEntitlements();
-  const { accounts, loading, error, createAccount, updateAccount, deleteAccount, reorderAccounts } = useAccounts();
+  const { accounts, loading, error, createAccount, updateAccount, deleteAccount, deactivateAccount, reactivateAccount, reorderAccounts, refetch } = useAccounts();
   const { fetchSubaccounts, createSubaccount, updateSubaccount, deleteSubaccount } = useSubaccounts();
   const [opened, { open, close }] = useDisclosure(false);
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -110,6 +112,11 @@ export default function AccountSettings() {
   const [inlineEditingId, setInlineEditingId] = useState<number | null>(null);
   const [inlineEditValue, setInlineEditValue] = useState('');
   const [inlineEditType, setInlineEditType] = useState('');
+
+  // 使用停止関連の状態
+  const [deactivateTargetAccount, setDeactivateTargetAccount] = useState<{ id: number; name: string } | null>(null);
+  const [showInactiveAccounts, setShowInactiveAccounts] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
 
   // 補助科目のキャッシュ（勘定科目ID → 補助科目リスト）
   const [subaccountsCache, setSubaccountsCache] = useState<Record<number, { id: number; name: string }[]>>({});
@@ -265,13 +272,47 @@ export default function AccountSettings() {
     }
   };
 
-  const handleDeleteAccount = async (id: number) => {
+  const handleDeleteAccount = async (id: number, name: string) => {
     if (!confirm('この勘定科目を削除しますか？')) return;
 
     try {
       await deleteAccount(id);
     } catch (err) {
-      console.error('Error deleting account:', err);
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('409')) {
+        // 使用中のため削除不可 → 使用停止モーダルを表示
+        setDeactivateTargetAccount({ id, name });
+      } else {
+        console.error('Error deleting account:', err);
+      }
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    if (!deactivateTargetAccount) return;
+    setDeactivating(true);
+    try {
+      await deactivateAccount(deactivateTargetAccount.id);
+      setDeactivateTargetAccount(null);
+    } catch (err) {
+      console.error('Error deactivating account:', err);
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
+  const handleToggleInactiveAccounts = async (checked: boolean) => {
+    setShowInactiveAccounts(checked);
+    await refetch(checked);
+  };
+
+  const handleReactivateAccount = async (id: number) => {
+    try {
+      await reactivateAccount(id);
+      // 停止中科目を表示中なら再取得して一覧を更新
+      await refetch(showInactiveAccounts);
+    } catch (err) {
+      console.error('Error reactivating account:', err);
     }
   };
 
@@ -324,7 +365,13 @@ export default function AccountSettings() {
 
   return (
     <Stack gap="md">
-      <Group justify="flex-end">
+      <Group justify="space-between" wrap="wrap">
+        <Switch
+          label="停止中科目を表示"
+          checked={showInactiveAccounts}
+          onChange={(e) => handleToggleInactiveAccounts(e.currentTarget.checked)}
+          size="sm"
+        />
         <Group gap="sm">
           <SegmentedControl
             value={viewMode}
@@ -380,9 +427,14 @@ export default function AccountSettings() {
                           <Box>
                             {/* 勘定科目 */}
                             <Group justify="space-between" p="xs" style={{
-                              backgroundColor: surfaceBg,
+                              backgroundColor: account.is_active === false
+                                ? (colorScheme === 'dark' ? 'rgba(255,255,255,0.03)' : '#f5f5f5')
+                                : surfaceBg,
                               borderRadius: '6px',
-                              border: surfaceBorder
+                              border: account.is_active === false
+                                ? (colorScheme === 'dark' ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e0e0e0')
+                                : surfaceBorder,
+                              opacity: account.is_active === false ? 0.7 : 1,
                             }}>
                               {inlineEditingId === account.id ? (
                                 // インライン編集モード
@@ -421,18 +473,20 @@ export default function AccountSettings() {
                               ) : (
                                 // 表示モード（クリックで編集開始）
                                 <>
-                                  {dragHandle}
+                                  {account.is_active !== false && dragHandle}
                                   <span
                                     style={{
                                       flex: 1,
                                       fontWeight: 500,
-                                      cursor: 'pointer',
+                                      cursor: account.is_active === false ? 'default' : 'pointer',
                                       padding: '4px 8px',
                                       borderRadius: '4px',
                                       transition: 'background-color 0.15s',
+                                      color: account.is_active === false ? surfaceTextMuted : undefined,
                                     }}
-                                    onClick={() => startInlineEdit(account)}
+                                    onClick={() => account.is_active !== false && startInlineEdit(account)}
                                     onMouseEnter={(e) => {
+                                      if (account.is_active === false) return;
                                       e.currentTarget.style.backgroundColor = colorScheme === 'dark'
                                         ? 'rgba(255,255,255,0.1)'
                                         : 'rgba(0,0,0,0.05)';
@@ -440,43 +494,60 @@ export default function AccountSettings() {
                                     onMouseLeave={(e) => {
                                       e.currentTarget.style.backgroundColor = 'transparent';
                                     }}
-                                    title="クリックして編集"
+                                    title={account.is_active === false ? undefined : 'クリックして編集'}
                                   >
                                     {account.name}
                                   </span>
+                                  {account.is_active === false && (
+                                    <Badge color="gray" variant="light" size="sm">停止中</Badge>
+                                  )}
                                 </>
                               )}
                               <Group gap="xs">
-                                {isPro && (
-                                  <ActionIcon
-                                    size="sm"
-                                    variant="subtle"
-                                    onClick={() => openSubaccountManager(account)}
-                                    title="補助科目を管理"
+                                {account.is_active === false ? (
+                                  // 停止中アカウント：使用再開ボタン
+                                  <Button
+                                    size="xs"
+                                    variant="light"
+                                    color="blue"
+                                    onClick={() => handleReactivateAccount(account.id)}
                                   >
-                                    <IconPlus size={16} />
-                                  </ActionIcon>
-                                )}
-                                {account.is_system ? (
-                                  <ActionIcon
-                                    size="sm"
-                                    variant="subtle"
-                                    color="gray"
-                                    disabled
-                                    title="システム勘定科目は削除できません"
-                                  >
-                                    <IconLock size={16} />
-                                  </ActionIcon>
+                                    使用再開
+                                  </Button>
                                 ) : (
-                                  <ActionIcon
-                                    size="sm"
-                                    variant="subtle"
-                                    color="red"
-                                    onClick={() => handleDeleteAccount(account.id)}
-                                    title="削除"
-                                  >
-                                    <IconTrash size={16} />
-                                  </ActionIcon>
+                                  <>
+                                    {isPro && (
+                                      <ActionIcon
+                                        size="sm"
+                                        variant="subtle"
+                                        onClick={() => openSubaccountManager(account)}
+                                        title="補助科目を管理"
+                                      >
+                                        <IconPlus size={16} />
+                                      </ActionIcon>
+                                    )}
+                                    {account.is_system ? (
+                                      <ActionIcon
+                                        size="sm"
+                                        variant="subtle"
+                                        color="gray"
+                                        disabled
+                                        title="システム勘定科目は削除できません"
+                                      >
+                                        <IconLock size={16} />
+                                      </ActionIcon>
+                                    ) : (
+                                      <ActionIcon
+                                        size="sm"
+                                        variant="subtle"
+                                        color="red"
+                                        onClick={() => handleDeleteAccount(account.id, account.name)}
+                                        title="削除"
+                                      >
+                                        <IconTrash size={16} />
+                                      </ActionIcon>
+                                    )}
+                                  </>
                                 )}
                               </Group>
                             </Group>
@@ -565,6 +636,40 @@ export default function AccountSettings() {
               loading={isSubmitting}
             >
               追加
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* 使用停止確認モーダル */}
+      <Modal
+        opened={deactivateTargetAccount !== null}
+        onClose={() => setDeactivateTargetAccount(null)}
+        title="使用停止の確認"
+        centered
+        zIndex={2000}
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            「{deactivateTargetAccount?.name}」は仕訳帳に使用されているため削除できません。
+          </Text>
+          <Text size="sm">
+            代わりに<strong>使用停止</strong>にしますか？使用停止にすると新しい仕訳では選択できなくなりますが、過去の仕訳・レポートには引き続き表示されます。
+          </Text>
+          <Group justify="flex-end" gap="sm">
+            <Button
+              variant="outline"
+              onClick={() => setDeactivateTargetAccount(null)}
+              disabled={deactivating}
+            >
+              キャンセル
+            </Button>
+            <Button
+              color="orange"
+              loading={deactivating}
+              onClick={handleDeactivateAccount}
+            >
+              使用停止にする
             </Button>
           </Group>
         </Stack>
