@@ -63,12 +63,15 @@ const { isPro } = useEntitlements()
 
 ## デプロイ
 
+**main ブランチへの push で GitHub Actions が自動でビルド＆デプロイする。**
+
 ```bash
-npm run build    # ビルドが通ることを確認してから
-npm run deploy   # GitHub Pages（gh-pages ブランチ）へデプロイ
+git push origin main   # これだけでデプロイされる
 ```
 
-本番 URL は https://dbbudget.app（独自ドメイン、GitHub Pages）。
+- ワークフロー: `.github/workflows/deploy.yml`
+- 本番 URL: https://dbbudget.app（独自ドメイン、GitHub Pages）
+- `npm run deploy`（gh-pages）は廃止済み。使わないこと
 
 ## やってはいけないこと
 
