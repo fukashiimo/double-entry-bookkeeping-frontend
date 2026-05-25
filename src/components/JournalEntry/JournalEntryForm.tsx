@@ -424,17 +424,34 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
   const lastDebitAccount  = recentEntries[0]?.debit_account_name;
   const lastCreditAccount = recentEntries[0]?.credit_account_name;
 
-  // 仕訳帳モード用: 直近100件（時系列昇順・最新が下）
+  // セッション内で入力した仕訳のID（入力順を保持するため）
+  const [sessionEntryIds, setSessionEntryIds] = useState<number[]>([]);
+
+  // 仕訳帳モード用: セッション内入力は入力順、それ以外は日付順
   const journalModeEntries = useMemo(() => {
     if (!journalEntries || journalEntries.length === 0) return [];
-    return [...journalEntries]
+    if (sessionEntryIds.length === 0) {
+      return [...journalEntries]
+        .sort((a, b) => {
+          const d = new Date(a.date).getTime() - new Date(b.date).getTime();
+          if (d !== 0) return d;
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        })
+        .slice(-100);
+    }
+    const sessionSet = new Set(sessionEntryIds);
+    const nonSession = journalEntries
+      .filter(e => !sessionSet.has(e.id))
       .sort((a, b) => {
         const d = new Date(a.date).getTime() - new Date(b.date).getTime();
         if (d !== 0) return d;
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      })
-      .slice(-100);
-  }, [journalEntries]);
+      });
+    const sessionEntries = sessionEntryIds
+      .map(id => journalEntries.find(e => e.id === id))
+      .filter((e): e is JournalEntry => !!e);
+    return [...nonSession, ...sessionEntries].slice(-100);
+  }, [journalEntries, sessionEntryIds]);
 
   // 仕訳帳モード: 編集中エントリ
   const [journalEditingEntry, setJournalEditingEntry] = useState<JournalEntry | null>(null);
@@ -447,7 +464,6 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
     }
   }, [journalModeEntries.length, inputMode]);
 
-  const surfaceBg = colorScheme === 'dark' ? theme.colors.dark[6] : '#f8f9fa';
   const surfaceBorder = colorScheme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e9ecef';
 
   const startEditingJournalEntry = (entry: JournalEntry) => {
@@ -527,7 +543,10 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
         if (onSubmit) onSubmit({ date: null, ...values }, true);
         refetchJournalEntries();
       } else {
-        await createJournalEntry(entryData);
+        const newEntry = await createJournalEntry(entryData);
+        if (inputMode === 'journal' && newEntry?.id) {
+          setSessionEntryIds(prev => [...prev, newEntry.id]);
+        }
         if (onSubmit) onSubmit({ date: null, ...values }, false);
         refetchJournalEntries();
         form.reset();
@@ -708,37 +727,42 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
     </>
   );
 
-  // ─── 仕訳帳モード（連続入力形式）────────────────────────────────────────
+  // ─── 仕訳帳モード（1行連続入力形式）────────────────────────────────────────
+  const theadBg  = colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[1];
+  const inputRowBg = colorScheme === 'dark' ? theme.colors.dark[8] : '#f0f7ff';
+  const inputBorderTop = colorScheme === 'dark' ? `2px solid ${theme.colors.dark[4]}` : `2px solid ${theme.colors.blue[2]}`;
+
+  // テーブル列幅定義（リスト表と入力行表で共通）
+  const COL = { date: 118, debitAmt: 86, creditAmt: 86, action: 60 };
+
   const renderJournalMode = () => (
     <>
-      {/* 入力済み仕訳一覧（上部・スクロール可） */}
-      <Box mb="md">
-        <Text size="sm" fw={600} c="dimmed" mb="xs">
-          入力済み仕訳{journalModeEntries.length > 0 ? `（${journalModeEntries.length}件）` : ''}
-        </Text>
-        {journalModeEntries.length === 0 ? (
-          <Box p="md" style={{ textAlign: 'center', backgroundColor: surfaceBg, border: surfaceBorder, borderRadius: 6 }}>
-            <Text size="sm" c="dimmed">仕訳はまだありません</Text>
-          </Box>
-        ) : (
-          <Box
-            ref={journalListRef}
-            style={{ maxHeight: '38vh', overflowY: 'auto', border: surfaceBorder, borderRadius: 6 }}
-          >
-            <Table striped withColumnBorders style={{ tableLayout: 'fixed', fontSize: '12px' }}>
-              <Table.Thead style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[1] }}>
+      {/* ── 入力済み仕訳 + 入力行を1つのボックスで統合 ── */}
+      <Box mb="xs" style={{ border: surfaceBorder, borderRadius: 6, overflow: 'hidden' }}>
+
+        {/* スクロール可能なエントリ一覧 */}
+        <Box ref={journalListRef} style={{ maxHeight: '32vh', overflowY: 'auto' }}>
+          <Table withColumnBorders style={{ tableLayout: 'fixed', fontSize: 12, width: '100%' }}>
+            <Table.Thead style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: theadBg }}>
+              <Table.Tr>
+                <Table.Th style={{ width: COL.date }}>日付</Table.Th>
+                <Table.Th>借方科目</Table.Th>
+                <Table.Th style={{ width: COL.debitAmt, textAlign: 'right' }}>借方金額</Table.Th>
+                <Table.Th>貸方科目</Table.Th>
+                <Table.Th style={{ width: COL.creditAmt, textAlign: 'right' }}>貸方金額</Table.Th>
+                <Table.Th>摘要</Table.Th>
+                <Table.Th style={{ width: COL.action }}></Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {journalModeEntries.length === 0 ? (
                 <Table.Tr>
-                  <Table.Th style={{ width: 72 }}>日付</Table.Th>
-                  <Table.Th>借方科目</Table.Th>
-                  <Table.Th style={{ width: 80, textAlign: 'right' }}>借方金額</Table.Th>
-                  <Table.Th>貸方科目</Table.Th>
-                  <Table.Th style={{ width: 80, textAlign: 'right' }}>貸方金額</Table.Th>
-                  <Table.Th>摘要</Table.Th>
-                  <Table.Th style={{ width: 64 }}></Table.Th>
+                  <Table.Td colSpan={7} style={{ textAlign: 'center', padding: '16px', color: 'var(--mantine-color-dimmed)' }}>
+                    仕訳はまだありません
+                  </Table.Td>
                 </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {journalModeEntries.map((entry) => (
+              ) : (
+                journalModeEntries.map((entry) => (
                   <Table.Tr
                     key={entry.id}
                     style={{
@@ -748,7 +772,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
                     }}
                   >
                     <Table.Td style={{ fontSize: 11 }}>
-                      {new Date(entry.date + 'T00:00:00').toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' })}
+                      {new Date(entry.date + 'T00:00:00').toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' })}
                     </Table.Td>
                     <Table.Td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.debit_account_name}</Table.Td>
                     <Table.Td style={{ textAlign: 'right' }}>{entry.amount.toLocaleString()}</Table.Td>
@@ -768,117 +792,168 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
                       </Group>
                     </Table.Td>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Box>
-        )}
+                ))
+              )}
+            </Table.Tbody>
+          </Table>
+        </Box>
+
+        {/* ── 1行入力行（スクロールしない・常に表示） ── */}
+        <Box style={{ borderTop: inputBorderTop, backgroundColor: inputRowBg }}>
+          <Table withColumnBorders style={{ tableLayout: 'fixed', fontSize: 12, width: '100%' }}>
+            <Table.Tbody>
+              <Table.Tr>
+                {/* 日付：年 + 月日 の2フィールドをコンパクトに並べる */}
+                <Table.Td style={{ width: COL.date, padding: '4px 6px' }}>
+                  <Group gap={2} wrap="nowrap">
+                    <TextInput
+                      ref={yearRef}
+                      size="xs"
+                      value={yearValue}
+                      maxLength={4}
+                      placeholder="年"
+                      onChange={(e) => setYearValue(e.currentTarget.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                          e.preventDefault();
+                          monthDayRef.current?.focus();
+                        }
+                      }}
+                      styles={{ input: { width: 46, minWidth: 0, padding: '0 4px', textAlign: 'center' } }}
+                    />
+                    <TextInput
+                      ref={monthDayRef}
+                      size="xs"
+                      value={monthDayValue}
+                      maxLength={5}
+                      placeholder="月/日"
+                      onChange={(e) => setMonthDayValue(e.currentTarget.value)}
+                      onBlur={() => setMonthDayValue(formatMonthDay(monthDayValue))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                          e.preventDefault();
+                          setMonthDayValue(formatMonthDay(monthDayValue));
+                          setTimeout(() => debitAccountRef.current?.focus(), 10);
+                        }
+                      }}
+                      styles={{ input: { width: 50, minWidth: 0, padding: '0 4px', textAlign: 'center' } }}
+                    />
+                  </Group>
+                </Table.Td>
+
+                {/* 借方科目 */}
+                <Table.Td style={{ padding: '4px 6px' }}>
+                  <AccountSelect
+                    ref={debitAccountRef}
+                    size="xs"
+                    data={groupedAccountOptions}
+                    value={form.values.debitAccount}
+                    error={form.errors.debitAccount}
+                    defaultHighlightValue={!form.values.debitAccount ? lastDebitAccount : undefined}
+                    onChange={async (val) => {
+                      form.setFieldValue('debitAccount', val);
+                      form.setFieldValue('debitSubaccount', '');
+                      const list = await fetchSubaccounts(findAccountIdByName(val));
+                      setDebitSubOptions(list.map(s => ({ value: s.name, label: s.name })));
+                    }}
+                    onEnterKey={() => setTimeout(() => debitAmountRef.current?.focus(), 10)}
+                  />
+                </Table.Td>
+
+                {/* 借方金額 */}
+                <Table.Td style={{ width: COL.debitAmt, padding: '4px 6px' }}>
+                  <AmountInput
+                    ref={debitAmountRef}
+                    size="xs"
+                    placeholder="金額"
+                    value={form.values.debitAmount}
+                    onChange={handleDebitAmountChange}
+                    onBlurAutoFill={handleDebitAmountBlur}
+                    error={form.errors.debitAmount}
+                    onKeyDown={handleEnterToNext(creditAccountRef)}
+                  />
+                </Table.Td>
+
+                {/* 貸方科目 */}
+                <Table.Td style={{ padding: '4px 6px' }}>
+                  <AccountSelect
+                    ref={creditAccountRef}
+                    size="xs"
+                    data={groupedAccountOptions}
+                    value={form.values.creditAccount}
+                    error={form.errors.creditAccount}
+                    defaultHighlightValue={!form.values.creditAccount ? lastCreditAccount : undefined}
+                    onChange={async (val) => {
+                      form.setFieldValue('creditAccount', val);
+                      form.setFieldValue('creditSubaccount', '');
+                      const list = await fetchSubaccounts(findAccountIdByName(val));
+                      setCreditSubOptions(list.map(s => ({ value: s.name, label: s.name })));
+                    }}
+                    onEnterKey={() => setTimeout(() => creditAmountRef.current?.focus(), 10)}
+                  />
+                </Table.Td>
+
+                {/* 貸方金額 */}
+                <Table.Td style={{ width: COL.creditAmt, padding: '4px 6px' }}>
+                  <AmountInput
+                    ref={creditAmountRef}
+                    size="xs"
+                    placeholder="金額"
+                    value={form.values.creditAmount}
+                    onChange={handleCreditAmountChange}
+                    error={form.errors.creditAmount}
+                    onKeyDown={handleEnterToNext(descriptionRef)}
+                  />
+                </Table.Td>
+
+                {/* 摘要 */}
+                <Table.Td style={{ padding: '4px 6px' }}>
+                  <TextInput
+                    ref={descriptionRef}
+                    size="xs"
+                    placeholder="摘要（Enterで登録）"
+                    onKeyDown={handleDescriptionKeyDown}
+                    {...form.getInputProps('description')}
+                  />
+                </Table.Td>
+
+                {/* 登録・更新ボタン */}
+                <Table.Td style={{ width: COL.action, padding: '4px 6px' }}>
+                  <Button type="submit" size="xs" loading={loading} style={{ width: '100%' }}>
+                    {journalEditingEntry ? '更新' : '登録'}
+                  </Button>
+                </Table.Td>
+              </Table.Tr>
+            </Table.Tbody>
+          </Table>
+
+          {/* 編集中の場合のみキャンセルバーを表示 */}
+          {journalEditingEntry && (
+            <Group px="sm" py={4} justify="space-between" style={{ borderTop: surfaceBorder }}>
+              <Text size="xs" c="dimmed">
+                ✎ 編集中: {[journalEditingEntry.debit_account_name, '→', journalEditingEntry.credit_account_name, journalEditingEntry.description && `（${journalEditingEntry.description}）`].filter(Boolean).join(' ')}
+              </Text>
+              <Button size="xs" variant="subtle" color="gray" onClick={cancelJournalEdit}>キャンセル</Button>
+            </Group>
+          )}
+        </Box>
       </Box>
 
-      {/* 入力フォームヘッダー */}
-      <Group justify="space-between" align="center" mb="xs">
-        <Text size="sm" fw={600} c="dimmed">
-          {journalEditingEntry ? '✎ 編集中' : '+ 新規入力'}
-        </Text>
-        {journalEditingEntry && (
-          <Button size="xs" variant="subtle" color="gray" onClick={cancelJournalEdit}>
-            キャンセル
-          </Button>
-        )}
-      </Group>
-
-      {renderDateInputs()}
-
-      <Paper withBorder radius="md" mb="md" style={{ overflow: 'hidden' }}>
-        <Box style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 120px 1fr 120px',
-          gap: '1px',
-          backgroundColor: colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[3],
-        }}>
-          {/* ヘッダー */}
-          {(['借方科目', '借方金額', '貸方科目', '貸方金額'] as const).map((h) => (
-            <Box key={h} p="xs" style={{ backgroundColor: colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[1] }}>
-              <Text size="sm" fw={600} ta="center">{h}</Text>
-            </Box>
-          ))}
-
-          {/* 入力行 */}
-          <Box p="xs" style={{ backgroundColor: colorScheme === 'dark' ? theme.colors.dark[7] : 'white' }}>
-            <AccountSelect
-              ref={debitAccountRef} size="sm"
-              data={groupedAccountOptions}
-              value={form.values.debitAccount}
-              error={form.errors.debitAccount}
-              defaultHighlightValue={!form.values.debitAccount ? lastDebitAccount : undefined}
-              onChange={async (val) => {
-                form.setFieldValue('debitAccount', val);
-                form.setFieldValue('debitSubaccount', '');
-                const list = await fetchSubaccounts(findAccountIdByName(val));
-                setDebitSubOptions(list.map(s => ({ value: s.name, label: s.name })));
-              }}
-              onEnterKey={() => setTimeout(() => debitAmountRef.current?.focus(), 10)}
-            />
-          </Box>
-          <Box p="xs" style={{ backgroundColor: colorScheme === 'dark' ? theme.colors.dark[7] : 'white' }}>
-            <AmountInput
-              ref={debitAmountRef} placeholder="金額" size="sm"
-              value={form.values.debitAmount}
-              onChange={handleDebitAmountChange}
-              onBlurAutoFill={handleDebitAmountBlur}
-              error={form.errors.debitAmount}
-              onKeyDown={handleEnterToNext(creditAccountRef)}
-            />
-          </Box>
-          <Box p="xs" style={{ backgroundColor: colorScheme === 'dark' ? theme.colors.dark[7] : 'white' }}>
-            <AccountSelect
-              ref={creditAccountRef} size="sm"
-              data={groupedAccountOptions}
-              value={form.values.creditAccount}
-              error={form.errors.creditAccount}
-              defaultHighlightValue={!form.values.creditAccount ? lastCreditAccount : undefined}
-              onChange={async (val) => {
-                form.setFieldValue('creditAccount', val);
-                form.setFieldValue('creditSubaccount', '');
-                const list = await fetchSubaccounts(findAccountIdByName(val));
-                setCreditSubOptions(list.map(s => ({ value: s.name, label: s.name })));
-              }}
-              onEnterKey={() => setTimeout(() => creditAmountRef.current?.focus(), 10)}
-            />
-          </Box>
-          <Box p="xs" style={{ backgroundColor: colorScheme === 'dark' ? theme.colors.dark[7] : 'white' }}>
-            <AmountInput
-              ref={creditAmountRef} placeholder="金額" size="sm"
-              value={form.values.creditAmount}
-              onChange={handleCreditAmountChange}
-              error={form.errors.creditAmount}
-              onKeyDown={handleEnterToNext(descriptionRef)}
-            />
-          </Box>
-        </Box>
-      </Paper>
-
+      {/* Pro版：補助科目（テーブル外に配置） */}
       {isPro && (
-        <Grid mb="md">
+        <Grid mb="xs">
           <Grid.Col span={6}>
-            <Select label="借方補助科目" placeholder={debitSubOptions.length === 0 ? '補助科目なし' : '補助科目を選択'}
+            <Select size="xs" label="借方補助科目" placeholder={debitSubOptions.length === 0 ? '補助科目なし' : '補助科目を選択'}
               data={debitSubOptions} searchable clearable disabled={debitSubOptions.length === 0}
               {...form.getInputProps('debitSubaccount')} />
           </Grid.Col>
           <Grid.Col span={6}>
-            <Select label="貸方補助科目" placeholder={creditSubOptions.length === 0 ? '補助科目なし' : '補助科目を選択'}
+            <Select size="xs" label="貸方補助科目" placeholder={creditSubOptions.length === 0 ? '補助科目なし' : '補助科目を選択'}
               data={creditSubOptions} searchable clearable disabled={creditSubOptions.length === 0}
               {...form.getInputProps('creditSubaccount')} />
           </Grid.Col>
         </Grid>
       )}
-
-      <TextInput
-        ref={descriptionRef}
-        label="摘要" placeholder="取引の内容を入力（Enterで登録）" mb="md"
-        onKeyDown={handleDescriptionKeyDown}
-        {...form.getInputProps('description')}
-      />
     </>
   );
 
@@ -1095,12 +1170,12 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
           {inputMode === 'journal' && renderJournalMode()}
           {inputMode === 'simple' && renderSimpleMode()}
 
-          {inputMode !== 'simple' && (
+          {inputMode === 'transfer' && (
             <Box style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
               {isEditMode && onCancel && (
                 <Button variant="outline" size="md" onClick={onCancel}>キャンセル</Button>
               )}
-              <Button type="submit" size="md" loading={loading}>{isEditMode || (journalEditingEntry && inputMode === 'journal') ? '更新' : '登録'}</Button>
+              <Button type="submit" size="md" loading={loading}>{isEditMode ? '更新' : '登録'}</Button>
             </Box>
           )}
         </form>

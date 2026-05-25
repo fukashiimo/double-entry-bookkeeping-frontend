@@ -1,4 +1,13 @@
 import { useEffect } from 'react';
+
+/** 16進カラーの輝度が明るい（>0.55）かを判定 */
+function isLightColor(hex: string): boolean {
+  if (!hex || !hex.startsWith('#') || hex.length < 7) return false;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
+}
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppShell, Burger, Group, Title, UnstyledButton, Text, Box, Stack, ActionIcon, Affix, Menu, Avatar } from '@mantine/core';
 import { useMantineColorScheme, useMantineTheme, useComputedColorScheme } from '@mantine/core';
@@ -56,8 +65,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const sidebarBg    = isDark ? primaryShade[9] : primaryShade[1];
   const headerBg     = isDark ? primaryShade[9] : primaryShade[2];
   const textColor      = isDark ? 'rgba(255,255,255,0.90)' : '#1f2328';
-  const activeItemBg   = isDark ? primaryShade[7] : primaryShade[6];
-  const activeTextColor = '#ffffff';
+  const activeItemBg    = isDark ? primaryShade[7] : primaryShade[6];
+  // 明るいテーマ（パステルイエロー等）では白文字が視認しにくいため輝度で切り替え
+  const activeTextColor = (!isDark && isLightColor(primaryShade[6])) ? '#2c1a00' : '#ffffff';
   const hoverItemBg   = isDark ? 'rgba(255,255,255,0.08)' : primaryShade[2];
 
   const mainItems = mainLinks.map((link) => {

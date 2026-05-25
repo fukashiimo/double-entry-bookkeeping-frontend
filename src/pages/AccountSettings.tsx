@@ -34,6 +34,7 @@ import {
   IconX,
   IconGripVertical,
   IconLock,
+  IconCircleOff,
 } from '@tabler/icons-react';
 import { useAccounts } from '../hooks/useAccounts';
 import { useSubaccounts } from '../hooks/useSubaccounts';
@@ -113,8 +114,12 @@ export default function AccountSettings() {
   const [inlineEditValue, setInlineEditValue] = useState('');
   const [inlineEditType, setInlineEditType] = useState('');
 
-  // 使用停止関連の状態
-  const [deactivateTargetAccount, setDeactivateTargetAccount] = useState<{ id: number; name: string } | null>(null);
+  // 削除確認モーダルの状態
+  const [deleteConfirmAccount, setDeleteConfirmAccount] = useState<{ id: number; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // 使用停止関連の状態（fromDelete: 409エラー経由か直接停止か）
+  const [deactivateTargetAccount, setDeactivateTargetAccount] = useState<{ id: number; name: string; fromDelete?: boolean } | null>(null);
   const [showInactiveAccounts, setShowInactiveAccounts] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
 
@@ -272,20 +277,36 @@ export default function AccountSettings() {
     }
   };
 
-  const handleDeleteAccount = async (id: number, name: string) => {
-    if (!confirm('この勘定科目を削除しますか？')) return;
+  // 削除ボタン → 確認モーダルを開く
+  const handleDeleteAccount = (id: number, name: string) => {
+    setDeleteConfirmAccount({ id, name });
+  };
 
+  // 削除確認モーダルで「削除する」を押したとき
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmAccount) return;
+    setDeleting(true);
     try {
-      await deleteAccount(id);
+      await deleteAccount(deleteConfirmAccount.id);
+      setDeleteConfirmAccount(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg.includes('409')) {
-        // 使用中のため削除不可 → 使用停止モーダルを表示
-        setDeactivateTargetAccount({ id, name });
+        // 使用中のため削除不可 → 使用停止モーダルに切り替え
+        const { id, name } = deleteConfirmAccount;
+        setDeleteConfirmAccount(null);
+        setDeactivateTargetAccount({ id, name, fromDelete: true });
       } else {
         console.error('Error deleting account:', err);
       }
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  // 使用停止ボタン → 確認モーダルを開く（直接停止）
+  const handleStopAccount = (id: number, name: string) => {
+    setDeactivateTargetAccount({ id, name, fromDelete: false });
   };
 
   const handleDeactivateAccount = async () => {
@@ -532,20 +553,31 @@ export default function AccountSettings() {
                                         variant="subtle"
                                         color="gray"
                                         disabled
-                                        title="システム勘定科目は削除できません"
+                                        title="システム勘定科目は変更できません"
                                       >
                                         <IconLock size={16} />
                                       </ActionIcon>
                                     ) : (
-                                      <ActionIcon
-                                        size="sm"
-                                        variant="subtle"
-                                        color="red"
-                                        onClick={() => handleDeleteAccount(account.id, account.name)}
-                                        title="削除"
-                                      >
-                                        <IconTrash size={16} />
-                                      </ActionIcon>
+                                      <>
+                                        <ActionIcon
+                                          size="sm"
+                                          variant="subtle"
+                                          color="orange"
+                                          onClick={() => handleStopAccount(account.id, account.name)}
+                                          title="使用停止"
+                                        >
+                                          <IconCircleOff size={16} />
+                                        </ActionIcon>
+                                        <ActionIcon
+                                          size="sm"
+                                          variant="subtle"
+                                          color="red"
+                                          onClick={() => handleDeleteAccount(account.id, account.name)}
+                                          title="削除"
+                                        >
+                                          <IconTrash size={16} />
+                                        </ActionIcon>
+                                      </>
                                     )}
                                   </>
                                 )}
@@ -641,6 +673,32 @@ export default function AccountSettings() {
         </Stack>
       </Modal>
 
+      {/* 削除確認モーダル */}
+      <Modal
+        opened={deleteConfirmAccount !== null}
+        onClose={() => setDeleteConfirmAccount(null)}
+        title="勘定科目の削除"
+        centered
+        zIndex={2000}
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            「{deleteConfirmAccount?.name}」を削除します。
+          </Text>
+          <Text size="sm" c="dimmed">
+            この操作は元に戻せません。本当に削除しますか？
+          </Text>
+          <Group justify="flex-end" gap="sm">
+            <Button variant="outline" onClick={() => setDeleteConfirmAccount(null)} disabled={deleting}>
+              キャンセル
+            </Button>
+            <Button color="red" loading={deleting} onClick={handleConfirmDelete}>
+              削除する
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
       {/* 使用停止確認モーダル */}
       <Modal
         opened={deactivateTargetAccount !== null}
@@ -650,12 +708,26 @@ export default function AccountSettings() {
         zIndex={2000}
       >
         <Stack gap="md">
-          <Text size="sm">
-            「{deactivateTargetAccount?.name}」は仕訳帳に使用されているため削除できません。
-          </Text>
-          <Text size="sm">
-            代わりに<strong>使用停止</strong>にしますか？使用停止にすると新しい仕訳では選択できなくなりますが、過去の仕訳・レポートには引き続き表示されます。
-          </Text>
+          {deactivateTargetAccount?.fromDelete ? (
+            <>
+              <Text size="sm">
+                「{deactivateTargetAccount.name}」は既存の仕訳で使用されているため削除できません。
+              </Text>
+              <Text size="sm">
+                使用停止にすると、今後の仕訳入力候補には表示されませんが、過去の仕訳・貸借対照表・損益計算書には引き続き反映されます。
+              </Text>
+              <Text size="sm" fw={500}>使用停止にしますか？</Text>
+            </>
+          ) : (
+            <>
+              <Text size="sm">
+                「{deactivateTargetAccount?.name}」を使用停止にします。
+              </Text>
+              <Text size="sm" c="dimmed">
+                使用停止にすると、今後の仕訳入力候補には表示されなくなります。過去の仕訳や貸借対照表・損益計算書には引き続き反映されます。
+              </Text>
+            </>
+          )}
           <Group justify="flex-end" gap="sm">
             <Button
               variant="outline"

@@ -491,6 +491,8 @@ export default function Reports() {
                             nameKey="name"
                             cx="50%" cy="50%"
                             outerRadius={80}
+                            startAngle={90}
+                            endAngle={-270}
                             onClick={(entry) => navigateToJournalList(entry.name)}
                             style={{ cursor: 'pointer' }}
                           >
@@ -529,6 +531,8 @@ export default function Reports() {
                             nameKey="name"
                             cx="50%" cy="50%"
                             outerRadius={80}
+                            startAngle={90}
+                            endAngle={-270}
                             onClick={(entry) => navigateToJournalList(entry.name)}
                             style={{ cursor: 'pointer' }}
                           >
