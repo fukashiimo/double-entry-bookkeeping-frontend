@@ -3,14 +3,14 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Paper, Title, Stack, Grid, Text, Group, SegmentedControl,
   Table, Alert, Card, ThemeIcon, Divider, Button, Loader, Center,
-  Switch, Select, Box,
+  Switch, Select, Box, useMantineTheme,
 } from '@mantine/core';
 import {
   IconAlertCircle, IconTrendingUp, IconTrendingDown, IconWallet,
   IconPigMoney, IconBuildingBank, IconChevronLeft, IconChevronRight,
   IconCalendarStats,
 } from '@tabler/icons-react';
-import { PieChart } from '@mantine/charts';
+import { PieChart as RechartsPieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { useDashboard } from '../hooks/useDashboard';
 import { useJournalEntries } from '../hooks/useJournalEntries';
 
@@ -31,8 +31,12 @@ export default function Reports() {
     return 1; // 一時値（isInitializedがfalseの間はLoader表示）
   });
   const [reportType, setReportType] = useState<string>('summary');
-  const [hideZeroAccounts, setHideZeroAccounts] = useState<boolean>(false);
-  const [showAllSubaccounts, setShowAllSubaccounts] = useState<boolean>(false);
+  const [hideZeroAccounts, setHideZeroAccounts] = useState<boolean>(
+    () => localStorage.getItem('bs-hide-zero-accounts') === 'true'
+  );
+  const [showAllSubaccounts, setShowAllSubaccounts] = useState<boolean>(
+    () => localStorage.getItem('bs-show-all-subaccounts') === 'true'
+  );
   const [expandedSubaccounts, setExpandedSubaccounts] = useState<Record<string, boolean>>({});
   const [isInitialized, setIsInitialized] = useState<boolean>(!!urlYear && !!urlMonth);
   const [periodMode, setPeriodMode] = useState<'single' | 'range' | 'annual'>('single');
@@ -40,6 +44,11 @@ export default function Reports() {
   const [endMonth, setEndMonth] = useState<number>(12);
 
   const { journalEntries, loading: journalEntriesLoading } = useJournalEntries();
+  const theme = useMantineTheme();
+
+  // 表示設定を localStorage に永続化
+  useEffect(() => { localStorage.setItem('bs-hide-zero-accounts', String(hideZeroAccounts)); }, [hideZeroAccounts]);
+  useEffect(() => { localStorage.setItem('bs-show-all-subaccounts', String(showAllSubaccounts)); }, [showAllSubaccounts]);
 
   // 初期表示月：URLパラメータがなければ仕訳データ取得後に最新月を確定する
   useEffect(() => {
@@ -101,8 +110,6 @@ export default function Reports() {
     const expenseData = data?.expenseData || [];
     return hideZeroAccounts ? expenseData.filter((item: { name: string; value: number }) => item.value !== 0) : expenseData;
   }, [data?.expenseData, hideZeroAccounts]);
-
-  const tooltipFormatter = (value: number) => `¥${value.toLocaleString()}`;
 
   // 初期表示月が確定するまではローダーを表示（誤った月を一瞬でも描画しない）
   if (!isInitialized) {
@@ -188,6 +195,12 @@ export default function Reports() {
     (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
   };
 
+  // Mantine カラー文字列（例: 'red.6'）を実際の CSS 色に変換
+  const getChartColor = (colorStr: string) => {
+    const [name, shade] = colorStr.split('.');
+    return theme.colors[name as keyof typeof theme.colors]?.[parseInt(shade)] ?? '#888';
+  };
+
   // ─── カスタムツールチップ（勘定科目名が改行されないよう固定幅）───────────
   const renderTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
@@ -196,6 +209,7 @@ export default function Reports() {
       <Paper p="xs" shadow="sm" withBorder style={{ whiteSpace: 'nowrap', minWidth: 140 }}>
         <Text size="sm">{String(item.name ?? '')}</Text>
         <Text size="sm" fw={600}>¥{Number(item.value ?? 0).toLocaleString()}</Text>
+        <Text size="xs" c="dimmed" mt={2}>クリックで仕訳帳を表示</Text>
       </Paper>
     );
   };
@@ -469,14 +483,24 @@ export default function Reports() {
                 ) : revenueChartData.length > 0 ? (
                   <Grid align="center">
                     <Grid.Col span={{ base: 12, sm: 6 }}>
-                      <PieChart
-                        data={revenueChartData}
-                        withLabelsLine labelsPosition="outside" labelsType="percent"
-                        withTooltip tooltipDataSource="segment"
-                        h={200} startAngle={90} endAngle={-270}
-                        valueFormatter={tooltipFormatter}
-                        tooltipProps={{ content: renderTooltip }}
-                      />
+                      <ResponsiveContainer width="100%" height={200}>
+                        <RechartsPieChart>
+                          <Pie
+                            data={revenueChartData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%" cy="50%"
+                            outerRadius={80}
+                            onClick={(entry) => navigateToJournalList(entry.name)}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {revenueChartData.map((entry, index) => (
+                              <Cell key={index} fill={getChartColor(entry.color)} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip content={renderTooltip} />
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
                     </Grid.Col>
                     <Grid.Col span={{ base: 12, sm: 6 }}>
                       {renderTop5(revenueChartData, totalRevenue, '収益トップ5')}
@@ -497,14 +521,24 @@ export default function Reports() {
                 ) : expenseChartData.length > 0 ? (
                   <Grid align="center">
                     <Grid.Col span={{ base: 12, sm: 6 }}>
-                      <PieChart
-                        data={expenseChartData}
-                        withLabelsLine labelsPosition="outside" labelsType="percent"
-                        withTooltip tooltipDataSource="segment"
-                        h={200} startAngle={90} endAngle={-270}
-                        valueFormatter={tooltipFormatter}
-                        tooltipProps={{ content: renderTooltip }}
-                      />
+                      <ResponsiveContainer width="100%" height={200}>
+                        <RechartsPieChart>
+                          <Pie
+                            data={expenseChartData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%" cy="50%"
+                            outerRadius={80}
+                            onClick={(entry) => navigateToJournalList(entry.name)}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {expenseChartData.map((entry, index) => (
+                              <Cell key={index} fill={getChartColor(entry.color)} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip content={renderTooltip} />
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
                     </Grid.Col>
                     <Grid.Col span={{ base: 12, sm: 6 }}>
                       {renderTop5(expenseChartData, totalExpenses, '費用トップ5')}

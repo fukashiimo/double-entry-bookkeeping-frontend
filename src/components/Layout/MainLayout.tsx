@@ -52,9 +52,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // プライマリカラーの取得（テーマカラーに連動したサイドバー）
   const primaryColor = theme.primaryColor || 'orange';
   const primaryShade = theme.colors[primaryColor];
-  // サイドバー: ダークシェード[9]を使用。ダークモードはさらに暗く
-  const sidebarBg = isDark ? primaryShade[9] : primaryShade[9];
-  const activeItemBg = 'rgba(255,255,255,0.18)';
+  // ライトモード: 淡いテーマカラー背景 / ダークモード: 濃いテーマカラー背景
+  const sidebarBg    = isDark ? primaryShade[9] : primaryShade[1];
+  const headerBg     = isDark ? primaryShade[9] : primaryShade[2];
+  const textColor    = isDark ? 'rgba(255,255,255,0.90)' : primaryShade[8];
+  const activeItemBg = isDark ? 'rgba(255,255,255,0.18)' : primaryShade[3];
+  const hoverItemBg  = isDark ? 'rgba(255,255,255,0.08)' : primaryShade[2];
 
   const mainItems = mainLinks.map((link) => {
     const isActive = location.pathname === link.path;
@@ -73,21 +76,19 @@ export default function MainLayout({ children }: MainLayoutProps) {
           alignItems: 'center',
           width: '100%',
           borderRadius: theme.radius.md,
-          color: '#ffffff',
+          color: textColor,
           backgroundColor: isActive ? activeItemBg : 'transparent',
           transition: 'all 0.15s ease',
-          opacity: isActive ? 1 : 0.75,
+          fontWeight: isActive ? 600 : 400,
         }}
         onMouseEnter={(e) => {
           if (!isActive) {
-            (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.08)';
-            (e.currentTarget as HTMLElement).style.opacity = '1';
+            (e.currentTarget as HTMLElement).style.backgroundColor = hoverItemBg;
           }
         }}
         onMouseLeave={(e) => {
           if (!isActive) {
             (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-            (e.currentTarget as HTMLElement).style.opacity = '0.75';
           }
         }}
       >
@@ -115,8 +116,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
       {/* スリムなトップバー */}
       <AppShell.Header
         style={{
-          backgroundColor: sidebarBg,
-          borderBottom: 'none',
+          backgroundColor: headerBg,
+          borderBottom: isDark ? 'none' : '1px solid rgba(0,0,0,0.06)',
         }}
       >
         <Group h="100%" px="md" justify="space-between">
@@ -126,7 +127,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               onClick={toggle}
               hiddenFrom="sm"
               size="sm"
-              color="rgba(255,255,255,0.8)"
+              color={isDark ? 'rgba(255,255,255,0.8)' : primaryShade[7]}
             />
           </Group>
 
@@ -137,7 +138,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               radius="xl"
               onClick={toggleColorScheme}
               aria-label="Toggle color scheme"
-              style={{ color: 'rgba(255,255,255,0.75)' }}
+              style={{ color: isDark ? 'rgba(255,255,255,0.75)' : primaryShade[7] }}
             >
               {colorScheme === 'dark' ? <IconSun size={17} /> : <IconMoon size={17} />}
             </ActionIcon>
@@ -164,9 +165,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <AppShell.Navbar
         style={{
           backgroundColor: sidebarBg,
-          borderRight: 'none',
+          borderRight: isDark ? 'none' : '1px solid rgba(0,0,0,0.07)',
           zIndex: 1000,
-          boxShadow: '2px 0 8px rgba(0,0,0,0.15)',
+          boxShadow: isDark ? '2px 0 8px rgba(0,0,0,0.15)' : '2px 0 6px rgba(0,0,0,0.06)',
         }}
       >
         <Box
@@ -181,7 +182,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <Title
               order={4}
               style={{
-                color: '#ffffff',
+                color: textColor,
                 fontWeight: 700,
                 letterSpacing: '0.5px',
                 cursor: 'pointer',

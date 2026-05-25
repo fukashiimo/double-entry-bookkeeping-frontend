@@ -2,7 +2,8 @@ import { useMemo, useState, useRef, forwardRef, useEffect } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Box, TextInput, Button, Select, Grid, Paper, Title, Alert, Stack, Text, SegmentedControl, Group, ActionIcon, useMantineTheme, useMantineColorScheme, Table, Combobox, useCombobox } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconEdit } from '@tabler/icons-react';
+import { IconAlertCircle, IconEdit, IconTrash } from '@tabler/icons-react';
+import type { JournalEntry } from '../../lib/supabase';
 import { useForm } from '@mantine/form';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useSubaccounts } from '../../hooks/useSubaccounts';
@@ -33,12 +34,19 @@ interface JournalEntryFormProps {
   }) => void;
 }
 
+// ─── 全角数字→半角数字変換 ────────────────────────────────────────────────
+const toHalfWidth = (s: string) =>
+  s.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+
 // ─── 日付パーサー ───────────────────────────────────────────────────────────
 // year: 'YYYY', monthDay: 'MMDD' / 'M/D' / 'MM/DD' など → 'YYYY-MM-DD' or null
+// 全角数字も半角に自動変換
 const parseDate = (year: string, monthDay: string): string | null => {
-  if (!/^\d{4}$/.test(year.trim())) return null;
-  const yearNum = parseInt(year.trim(), 10);
-  const cleanMD = monthDay.trim().replace(/\//g, '');
+  const yearH = toHalfWidth(year.trim());
+  const monthDayH = toHalfWidth(monthDay.trim());
+  if (!/^\d{4}$/.test(yearH)) return null;
+  const yearNum = parseInt(yearH, 10);
+  const cleanMD = monthDayH.replace(/\//g, '');
   if (!cleanMD || !/^\d+$/.test(cleanMD)) return null;
 
   let month: number, day: number;
@@ -58,10 +66,10 @@ const parseDate = (year: string, monthDay: string): string | null => {
 };
 
 // ─── 月日フォーマッター ───────────────────────────────────────────────────────
-// '0115' / '115' / '1/15' → '01/15'（無効な入力はそのまま返す）
+// '0115' / '115' / '1/15' / '０１１５' → '01/15'（無効な入力はそのまま返す）
 const formatMonthDay = (input: string): string => {
   if (!input.trim()) return input;
-  const cleanMD = input.trim().replace(/\//g, '');
+  const cleanMD = toHalfWidth(input.trim()).replace(/\//g, '');
   if (!/^\d+$/.test(cleanMD)) return input;
   let month: number, day: number;
   if (cleanMD.length === 3) {
@@ -160,17 +168,19 @@ const AccountSelect = forwardRef<HTMLInputElement, AccountSelectProps>(
     const selectedLabel = data.flatMap((g) => g.items).find((i) => i.value === value)?.label ?? '';
 
     // inputValue: テキストボックスに表示する文字列
-    // isFocused: フォーカス中かどうか（trueのとき inputValue が検索クエリになる）
+    // isFocused: フォーカス中かどうか
+    // searchActive: ユーザーが文字入力を開始したか（true のとき inputValue が検索クエリになる）
     const [inputValue, setInputValue] = useState(selectedLabel);
     const [isFocused, setIsFocused] = useState(false);
+    const [searchActive, setSearchActive] = useState(false);
 
     // 外部から value が変わったとき（フォームリセット等）に表示を同期
     useEffect(() => {
       if (!isFocused) setInputValue(selectedLabel);
     }, [selectedLabel, isFocused]);
 
-    // フォーカス中は inputValue を検索クエリとして使う
-    const search = isFocused ? inputValue : '';
+    // 検索中のみ inputValue をフィルター条件として使う（フォーカス直後は全件表示）
+    const search = searchActive ? inputValue : '';
     const filteredData = search
       ? data
           .map((g) => ({ ...g, items: g.items.filter((i) => i.label.toLowerCase().includes(search.toLowerCase())) }))
@@ -180,13 +190,16 @@ const AccountSelect = forwardRef<HTMLInputElement, AccountSelectProps>(
     // active: 現在選択値 or 未検索時のデフォルトハイライト
     const activeValue = value || (!search ? (defaultHighlightValue ?? '') : '');
 
-    const handleFocus = () => {
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
       clearTimeout(blurTimeoutRef.current);
       setIsFocused(true);
-      setInputValue(''); // 検索のためにクリア
+      setSearchActive(false);
+      setInputValue(selectedLabel); // 選択済みラベルをそのまま表示
       combobox.openDropdown();
-      // ドロップダウンがレンダリングされてから選択状態を設定（50ms待つ）
+      // テキストを全選択 → タイプするとすぐ置き換わる
+      const target = e.currentTarget;
       setTimeout(() => {
+        target.select();
         if (value || defaultHighlightValue) combobox.updateSelectedOptionIndex('active');
         else combobox.selectFirstOption();
       }, 50);
@@ -195,6 +208,7 @@ const AccountSelect = forwardRef<HTMLInputElement, AccountSelectProps>(
     const handleBlur = () => {
       blurTimeoutRef.current = setTimeout(() => {
         setIsFocused(false);
+        setSearchActive(false);
         setInputValue(selectedLabel); // ラベルを復元
         combobox.closeDropdown();
       }, 150);
@@ -202,12 +216,16 @@ const AccountSelect = forwardRef<HTMLInputElement, AccountSelectProps>(
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const v = e.currentTarget.value;
+      setSearchActive(true); // 文字入力開始 → 検索モード
       setInputValue(v);
       combobox.openDropdown();
       setTimeout(() => {
         if (v) combobox.selectFirstOption();
-        else if (value || defaultHighlightValue) combobox.updateSelectedOptionIndex('active');
-        else combobox.selectFirstOption();
+        else {
+          setSearchActive(false);
+          if (value || defaultHighlightValue) combobox.updateSelectedOptionIndex('active');
+          else combobox.selectFirstOption();
+        }
       }, 0);
     };
 
@@ -216,10 +234,12 @@ const AccountSelect = forwardRef<HTMLInputElement, AccountSelectProps>(
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Escape') {
         setIsFocused(false);
+        setSearchActive(false);
         setInputValue(selectedLabel);
         combobox.closeDropdown();
       } else if (e.key === 'Tab') {
         setIsFocused(false);
+        setSearchActive(false);
         setInputValue(selectedLabel);
         combobox.closeDropdown();
       } else if (e.key === 'Enter' && !dropdownOpenRef.current) {
@@ -237,6 +257,7 @@ const AccountSelect = forwardRef<HTMLInputElement, AccountSelectProps>(
           const newLabel = data.flatMap((g) => g.items).find((i) => i.value === val)?.label ?? '';
           setInputValue(newLabel);
           setIsFocused(false);
+          setSearchActive(false);
           combobox.closeDropdown();
         }}
       >
@@ -300,7 +321,7 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
   const { accounts } = useAccounts();
-  const { journalEntries, createJournalEntry, updateJournalEntry, refetch: refetchJournalEntries } = useJournalEntries();
+  const { journalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry, refetch: refetchJournalEntries } = useJournalEntries();
   const { fetchSubaccounts } = useSubaccounts();
   const { isPro } = useEntitlements();
   const [debitSubOptions, setDebitSubOptions] = useState<{ value: string; label: string }[]>([]);
@@ -403,6 +424,70 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
   const lastDebitAccount  = recentEntries[0]?.debit_account_name;
   const lastCreditAccount = recentEntries[0]?.credit_account_name;
 
+  // 仕訳帳モード用: 直近100件（時系列昇順・最新が下）
+  const journalModeEntries = useMemo(() => {
+    if (!journalEntries || journalEntries.length === 0) return [];
+    return [...journalEntries]
+      .sort((a, b) => {
+        const d = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (d !== 0) return d;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      })
+      .slice(-100);
+  }, [journalEntries]);
+
+  // 仕訳帳モード: 編集中エントリ
+  const [journalEditingEntry, setJournalEditingEntry] = useState<JournalEntry | null>(null);
+  const journalListRef = useRef<HTMLDivElement>(null);
+
+  // 新規登録後・モード切替時に一覧を最新エントリへ自動スクロール
+  useEffect(() => {
+    if (inputMode === 'journal' && journalListRef.current) {
+      journalListRef.current.scrollTop = journalListRef.current.scrollHeight;
+    }
+  }, [journalModeEntries.length, inputMode]);
+
+  const surfaceBg = colorScheme === 'dark' ? theme.colors.dark[6] : '#f8f9fa';
+  const surfaceBorder = colorScheme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e9ecef';
+
+  const startEditingJournalEntry = (entry: JournalEntry) => {
+    setJournalEditingEntry(entry);
+    const [yr, mo, dy] = entry.date.split('-');
+    setYearValue(yr);
+    setMonthDayValue(`${mo}/${dy}`);
+    form.setValues({
+      debitAccount: entry.debit_account_name,
+      creditAccount: entry.credit_account_name,
+      debitAmount: entry.amount,
+      creditAmount: entry.amount,
+      description: entry.description,
+      debitSubaccount: entry.debit_subaccount_name || '',
+      creditSubaccount: entry.credit_subaccount_name || '',
+    });
+    setTimeout(() => debitAccountRef.current?.focus(), 100);
+  };
+
+  const cancelJournalEdit = () => {
+    setJournalEditingEntry(null);
+    form.reset();
+    setYearValue(String(new Date().getFullYear()));
+    setMonthDayValue('');
+    setDebitSubOptions([]);
+    setCreditSubOptions([]);
+    setTimeout(() => debitAccountRef.current?.focus(), 50);
+  };
+
+  const handleDeleteJournalEntry = async (id: number) => {
+    if (!confirm('この仕訳を削除しますか？')) return;
+    try {
+      await deleteJournalEntry(id);
+      if (journalEditingEntry?.id === id) cancelJournalEdit();
+      refetchJournalEntries();
+    } catch (err) {
+      console.error('Error deleting journal entry:', err);
+    }
+  };
+
   // ─── handleSubmit ───────────────────────────────────────────────────────────
   const handleSubmit = async (values: typeof form.values) => {
     (document.activeElement as HTMLElement)?.blur();
@@ -427,28 +512,40 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
         amount: values.debitAmount,
       };
 
-      if (isEditMode && editData) {
+      if (journalEditingEntry && inputMode === 'journal') {
+        // 仕訳帳モードでの編集更新
+        await updateJournalEntry({ id: journalEditingEntry.id, ...entryData });
+        setJournalEditingEntry(null);
+        form.reset();
+        setDebitSubOptions([]);
+        setCreditSubOptions([]);
+        refetchJournalEntries();
+        notifications.show({ title: '更新完了', message: '仕訳を更新しました', color: 'green', autoClose: 2000 });
+        setTimeout(() => debitAccountRef.current?.focus(), 50);
+      } else if (isEditMode && editData) {
         await updateJournalEntry({ id: editData.id, ...entryData });
+        if (onSubmit) onSubmit({ date: null, ...values }, true);
+        refetchJournalEntries();
       } else {
         await createJournalEntry(entryData);
-      }
-
-      if (onSubmit) onSubmit({ date: null, ...values }, isEditMode);
-      refetchJournalEntries();
-
-      if (!isEditMode) {
-        // 月日は保持したまま、全選択状態でフォーカス
+        if (onSubmit) onSubmit({ date: null, ...values }, false);
+        refetchJournalEntries();
         form.reset();
         setDebitSubOptions([]);
         setCreditSubOptions([]);
         setSimpleType(null);
         notifications.show({ title: '登録完了', message: '仕訳を登録しました', color: 'green', autoClose: 2000 });
-        setTimeout(() => {
-          if (monthDayRef.current) {
-            monthDayRef.current.focus();
-            monthDayRef.current.select();
-          }
-        }, 50);
+        if (inputMode === 'journal') {
+          // 仕訳帳モード: 日付保持のまま借方科目にフォーカス
+          setTimeout(() => debitAccountRef.current?.focus(), 50);
+        } else {
+          setTimeout(() => {
+            if (monthDayRef.current) {
+              monthDayRef.current.focus();
+              monthDayRef.current.select();
+            }
+          }, 50);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
@@ -611,9 +708,85 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
     </>
   );
 
-  // ─── 仕訳帳モード ────────────────────────────────────────────────────────
+  // ─── 仕訳帳モード（連続入力形式）────────────────────────────────────────
   const renderJournalMode = () => (
     <>
+      {/* 入力済み仕訳一覧（上部・スクロール可） */}
+      <Box mb="md">
+        <Text size="sm" fw={600} c="dimmed" mb="xs">
+          入力済み仕訳{journalModeEntries.length > 0 ? `（${journalModeEntries.length}件）` : ''}
+        </Text>
+        {journalModeEntries.length === 0 ? (
+          <Box p="md" style={{ textAlign: 'center', backgroundColor: surfaceBg, border: surfaceBorder, borderRadius: 6 }}>
+            <Text size="sm" c="dimmed">仕訳はまだありません</Text>
+          </Box>
+        ) : (
+          <Box
+            ref={journalListRef}
+            style={{ maxHeight: '38vh', overflowY: 'auto', border: surfaceBorder, borderRadius: 6 }}
+          >
+            <Table striped withColumnBorders style={{ tableLayout: 'fixed', fontSize: '12px' }}>
+              <Table.Thead style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[1] }}>
+                <Table.Tr>
+                  <Table.Th style={{ width: 72 }}>日付</Table.Th>
+                  <Table.Th>借方科目</Table.Th>
+                  <Table.Th style={{ width: 80, textAlign: 'right' }}>借方金額</Table.Th>
+                  <Table.Th>貸方科目</Table.Th>
+                  <Table.Th style={{ width: 80, textAlign: 'right' }}>貸方金額</Table.Th>
+                  <Table.Th>摘要</Table.Th>
+                  <Table.Th style={{ width: 64 }}></Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {journalModeEntries.map((entry) => (
+                  <Table.Tr
+                    key={entry.id}
+                    style={{
+                      backgroundColor: journalEditingEntry?.id === entry.id
+                        ? (colorScheme === 'dark' ? 'rgba(255,200,0,0.08)' : '#fffbe6')
+                        : undefined,
+                    }}
+                  >
+                    <Table.Td style={{ fontSize: 11 }}>
+                      {new Date(entry.date + 'T00:00:00').toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' })}
+                    </Table.Td>
+                    <Table.Td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.debit_account_name}</Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>{entry.amount.toLocaleString()}</Table.Td>
+                    <Table.Td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.credit_account_name}</Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>{entry.amount.toLocaleString()}</Table.Td>
+                    <Table.Td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.description}</Table.Td>
+                    <Table.Td>
+                      <Group gap={2} wrap="nowrap">
+                        <ActionIcon size="xs" variant="subtle" color="blue" title="編集"
+                          onClick={() => startEditingJournalEntry(entry)}>
+                          <IconEdit size={13} />
+                        </ActionIcon>
+                        <ActionIcon size="xs" variant="subtle" color="red" title="削除"
+                          onClick={() => handleDeleteJournalEntry(entry.id)}>
+                          <IconTrash size={13} />
+                        </ActionIcon>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Box>
+        )}
+      </Box>
+
+      {/* 入力フォームヘッダー */}
+      <Group justify="space-between" align="center" mb="xs">
+        <Text size="sm" fw={600} c="dimmed">
+          {journalEditingEntry ? '✎ 編集中' : '+ 新規入力'}
+        </Text>
+        {journalEditingEntry && (
+          <Button size="xs" variant="subtle" color="gray" onClick={cancelJournalEdit}>
+            キャンセル
+          </Button>
+        )}
+      </Group>
+
       {renderDateInputs()}
 
       <Paper withBorder radius="md" mb="md" style={{ overflow: 'hidden' }}>
@@ -927,14 +1100,14 @@ export const JournalEntryForm = ({ onSubmit, editData, onCancel, onEdit }: Journ
               {isEditMode && onCancel && (
                 <Button variant="outline" size="md" onClick={onCancel}>キャンセル</Button>
               )}
-              <Button type="submit" size="md" loading={loading}>{isEditMode ? '更新' : '登録'}</Button>
+              <Button type="submit" size="md" loading={loading}>{isEditMode || (journalEditingEntry && inputMode === 'journal') ? '更新' : '登録'}</Button>
             </Box>
           )}
         </form>
       </Paper>
 
       {/* 最近入力した仕訳 */}
-      {!isEditMode && recentEntries.length > 0 && (
+      {!isEditMode && recentEntries.length > 0 && inputMode !== 'journal' && (
         <Paper p="md" radius="md" withBorder>
           <Title order={4} mb="sm">最近入力した仕訳</Title>
           <Table striped highlightOnHover withColumnBorders>
