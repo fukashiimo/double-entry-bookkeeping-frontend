@@ -162,13 +162,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </Group>
       </AppShell.Header>
 
-      {/* ダークサイドバー */}
+      {/* サイドバー */}
       <AppShell.Navbar
         style={{
           backgroundColor: sidebarBg,
           borderRight: isDark ? 'none' : '1px solid rgba(0,0,0,0.07)',
           zIndex: 1000,
-          boxShadow: isDark ? '2px 0 8px rgba(0,0,0,0.15)' : '2px 0 6px rgba(0,0,0,0.06)',
         }}
       >
         <Box
@@ -178,25 +177,42 @@ export default function MainLayout({ children }: MainLayoutProps) {
             flexDirection: 'column',
           }}
         >
-          {/* アプリ名 */}
-          <Box px="md" py="lg" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          {/* ナビゲーション */}
+          <Box p="sm" style={{ flex: 1, overflowY: 'auto' }}>
+            <Stack gap={2}>{mainItems}</Stack>
+          </Box>
+
+          {/* アプリ名・フッター */}
+          <Box
+            px="md"
+            py="md"
+            style={{
+              borderTop: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.07)',
+            }}
+          >
             <Title
-              order={4}
+              order={6}
               style={{
-                color: textColor,
-                fontWeight: 700,
+                color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)',
+                fontWeight: 600,
                 letterSpacing: '0.5px',
                 cursor: 'pointer',
+                marginBottom: 4,
               }}
               onClick={() => navigate('/reports')}
             >
               BS家計簿
             </Title>
-          </Box>
-
-          {/* ナビゲーション */}
-          <Box p="sm" style={{ flex: 1, overflowY: 'auto' }}>
-            <Stack gap={2}>{mainItems}</Stack>
+            <Text
+              size="xs"
+              style={{
+                color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)',
+                cursor: 'pointer',
+              }}
+              onClick={() => navigate('/settings')}
+            >
+              利用規約 · プライバシーポリシー
+            </Text>
           </Box>
         </Box>
       </AppShell.Navbar>
