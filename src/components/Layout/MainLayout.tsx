@@ -55,9 +55,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // ライトモード: 淡いテーマカラー背景 / ダークモード: 濃いテーマカラー背景
   const sidebarBg    = isDark ? primaryShade[9] : primaryShade[1];
   const headerBg     = isDark ? primaryShade[9] : primaryShade[2];
-  const textColor    = isDark ? 'rgba(255,255,255,0.90)' : primaryShade[8];
-  const activeItemBg = isDark ? 'rgba(255,255,255,0.18)' : primaryShade[3];
-  const hoverItemBg  = isDark ? 'rgba(255,255,255,0.08)' : primaryShade[2];
+  const textColor      = isDark ? 'rgba(255,255,255,0.90)' : '#1f2328';
+  const activeItemBg   = isDark ? primaryShade[7] : primaryShade[6];
+  const activeTextColor = '#ffffff';
+  const hoverItemBg   = isDark ? 'rgba(255,255,255,0.08)' : primaryShade[2];
 
   const mainItems = mainLinks.map((link) => {
     const isActive = location.pathname === link.path;
@@ -76,7 +77,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           alignItems: 'center',
           width: '100%',
           borderRadius: theme.radius.md,
-          color: textColor,
+          color: isActive ? activeTextColor : textColor,
           backgroundColor: isActive ? activeItemBg : 'transparent',
           transition: 'all 0.15s ease',
           fontWeight: isActive ? 600 : 400,
