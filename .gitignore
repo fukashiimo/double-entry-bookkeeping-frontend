@@ -1,3 +1,10 @@
+# 環境変数（シークレットを含むため絶対にコミットしない）
+.env
+.env.local
+.env.staging
+.env.production
+.env.*.local
+
 # Logs
 logs
 *.log

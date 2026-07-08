@@ -1,8 +1,6 @@
 import { useState, useCallback } from 'react'
 import type { Subaccount } from '../lib/supabase'
-import { supabase } from '../lib/supabase'
-
-const supabaseUrl = 'https://iivyylojvqgucmbyfrqw.supabase.co'
+import { supabase, SUPABASE_URL as supabaseUrl } from '../lib/supabase'
 
 export const useSubaccounts = () => {
   const [subaccounts, setSubaccounts] = useState<Subaccount[]>([])

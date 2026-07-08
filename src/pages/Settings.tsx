@@ -7,10 +7,8 @@ import { useMantineColorScheme } from '@mantine/core';
 import { IconSun, IconMoon, IconAlertTriangle, IconLogout, IconRefresh } from '@tabler/icons-react';
 import { useTheme, type PrimaryColor } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL as supabaseUrl } from '../lib/supabase';
 import { notifications } from '@mantine/notifications';
-
-const supabaseUrl = 'https://iivyylojvqgucmbyfrqw.supabase.co';
 
 const colorOptions: Array<{ value: PrimaryColor; label: string; color: string }> = [
   { value: 'orange', label: 'オレンジ', color: '#FFB31E' },

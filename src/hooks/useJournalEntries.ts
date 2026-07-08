@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { JournalEntry } from '../lib/supabase'
-import { supabase } from '../lib/supabase'
-
-// Supabase設定を直接インポート
-const supabaseUrl = 'https://iivyylojvqgucmbyfrqw.supabase.co'
+import { supabase, SUPABASE_URL as supabaseUrl } from '../lib/supabase'
 
 export const useJournalEntries = () => {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
